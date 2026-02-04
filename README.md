@@ -1,6 +1,8 @@
 # TCSS360 FileWatcher
 
-This repository contains Iteration 1 deliverables for the TCSS360 FileWatcher project.
+## Team Members
+- Jonathan Sung
+- Abdulrahman Elmi
 
 ## Iteration 1 Scope
 - Project setup
