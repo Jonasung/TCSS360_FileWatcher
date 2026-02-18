@@ -1,0 +1,19 @@
+# Maven
+target/
+pom.xml.tag
+*.jar
+*.war
+
+# IDE
+.idea/
+*.iml
+.classpath
+.project
+.settings/
+
+# SQLite spike DB (local test)
+*.db
+
+# OS
+.DS_Store
+Thumbs.db
