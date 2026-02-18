@@ -1,8 +1,15 @@
 package TCSS_FileWatcher;
 
-public class MainApp {
+import javax.swing.*;
 
+public class MainApp {
     static void main(String[] args) {
-        System.out.println("File Watcher Application Started (Skeleton)");
+        SwingUtilities.invokeLater(() -> {
+            FileMonitorService monitor = new WatchServiceMonitor();
+            MonitorController controller = new MonitorController(monitor);
+
+            MainWindow window = new MainWindow(controller);
+            window.setVisible(true);
+        });
     }
 }

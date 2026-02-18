@@ -44,3 +44,8 @@ This iteration focuses on establishing the system architecture and defining clea
 Domain and contract layer completed.
 Ready for implementation of monitoring logic and SQLite integration.
 
+## Iteration 3 Work Summary
+- Implemented real-time directory monitoring using Java WatchService (create/modify/delete events)
+- Added extension filtering via QueryCriteria + ExtensionFilter
+- Implemented MonitorController to connect UI actions to the monitoring service
+- Built a functional Swing UI (MainWindow) to select a folder, start/stop monitoring, and display event logs

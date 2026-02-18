@@ -1,14 +1,34 @@
 package TCSS_FileWatcher;
 
-public class QueryCriteria {
+import java.util.Collections;
+import java.util.HashSet;
+import java.util.Set;
 
-    private EventType eventType;
+public final class QueryCriteria {
+    private final Set<String> allowedExtensions; // e.g. "txt", "java"
 
-    public QueryCriteria(EventType eventType) {
-        this.eventType = eventType;
+    public QueryCriteria(Set<String> allowedExtensions) {
+        this.allowedExtensions = new HashSet<>();
+        if (allowedExtensions != null) {
+            for (String ext : allowedExtensions) {
+                if (ext != null && !ext.isBlank()) {
+                    this.allowedExtensions.add(normalize(ext));
+                }
+            }
+        }
     }
 
-    public EventType getEventType() {
-        return eventType;
+    public Set<String> getAllowedExtensions() {
+        return Collections.unmodifiableSet(allowedExtensions);
+    }
+
+    public boolean hasExtensionFilter() {
+        return !allowedExtensions.isEmpty();
+    }
+
+    private static String normalize(String ext) {
+        ext = ext.trim().toLowerCase();
+        if (ext.startsWith(".")) ext = ext.substring(1);
+        return ext;
     }
 }

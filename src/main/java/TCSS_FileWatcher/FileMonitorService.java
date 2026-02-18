@@ -1,11 +1,11 @@
 package TCSS_FileWatcher;
 
+import java.nio.file.Path;
+
 public interface FileMonitorService {
-
-    void startMonitoring();
-
-    void stopMonitoring();
-
+    void start(Path directory, QueryCriteria criteria);
+    void stop();
+    boolean isRunning();
     void addListener(FileEventListener listener);
-
+    void removeListener(FileEventListener listener);
 }
