@@ -3,7 +3,7 @@ package TCSS_FileWatcher;
 import javax.swing.*;
 
 public class MainApp {
-    static void main(String[] args) {
+    public static void main(String[] args) {
         SwingUtilities.invokeLater(() -> {
             FileMonitorService monitor = new WatchServiceMonitor();
             MonitorController controller = new MonitorController(monitor);

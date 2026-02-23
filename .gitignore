@@ -1,0 +1,11 @@
+# Git for Windows bash crash dump (do not commit)
+bash.exe.stackdump
+
+# Common IDE / build
+.idea/
+*.iml
+out/
+target/
+.classpath
+.project
+.settings/
