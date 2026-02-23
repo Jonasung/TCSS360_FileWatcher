@@ -1,4 +1,4 @@
-package TCSS_FileWatcher;
+package TCSS_FileWatcher.domain;
 
 import java.nio.file.Path;
 import java.time.Instant;

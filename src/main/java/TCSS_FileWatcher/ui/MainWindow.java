@@ -1,6 +1,11 @@
-package TCSS_FileWatcher;
+package TCSS_FileWatcher.ui;
 
 import javax.swing.*;
+
+import TCSS_FileWatcher.app.MonitorController;
+import TCSS_FileWatcher.domain.FileEvent;
+import TCSS_FileWatcher.monitor.FileEventListener;
+
 import java.awt.*;
 import java.nio.file.Path;
 import java.util.Arrays;

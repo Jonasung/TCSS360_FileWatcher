@@ -1,6 +1,8 @@
-package TCSS_FileWatcher;
+package TCSS_FileWatcher.monitor;
 
 import java.nio.file.Path;
+
+import TCSS_FileWatcher.domain.QueryCriteria;
 
 public interface FileMonitorService {
     void start(Path directory, QueryCriteria criteria);

@@ -1,10 +1,14 @@
-package TCSS_FileWatcher;
+package TCSS_FileWatcher.monitor;
 
 import java.io.IOException;
 import java.nio.file.*;
 import java.time.Instant;
 import java.util.List;
 import java.util.concurrent.CopyOnWriteArrayList;
+
+import TCSS_FileWatcher.domain.EventType;
+import TCSS_FileWatcher.domain.FileEvent;
+import TCSS_FileWatcher.domain.QueryCriteria;
 
 import static java.nio.file.StandardWatchEventKinds.*;
 

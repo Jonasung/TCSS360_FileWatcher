@@ -1,4 +1,4 @@
-package TCSS_FileWatcher;
+package TCSS_FileWatcher.domain;
 
 public enum EventType {
     CREATED,

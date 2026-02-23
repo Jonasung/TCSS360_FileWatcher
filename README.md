@@ -49,3 +49,11 @@ Ready for implementation of monitoring logic and SQLite integration.
 - Added extension filtering via QueryCriteria + ExtensionFilter
 - Implemented MonitorController to connect UI actions to the monitoring service
 - Built a functional Swing UI (MainWindow) to select a folder, start/stop monitoring, and display event logs
+
+## Next: 3 Sprints to Full Spec
+
+- **Sprint 4:** SQLite + write-to-DB + on-exit prompt (Abdulrahman) | Menus, toolbar, shortcuts, enable/disable, extension chooser (Jonathan)
+- **Sprint 5:** Query window, extension query, clear DB, results table (Abdulrahman) | Date range, activity, path queries + error handling (Jonathan)
+- **Sprint 6:** CSV export + optional email (Abdulrahman) | About/Help, polish, zip + README (Jonathan)
+
+See **docs/SPRINT_OUTLINE.md** for the full task breakdown and **docs/PACKAGE_STRUCTURE.md** for package/folder responsibilities.

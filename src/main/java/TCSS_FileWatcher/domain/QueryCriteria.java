@@ -1,4 +1,4 @@
-package TCSS_FileWatcher;
+package TCSS_FileWatcher.domain;
 
 import java.util.Collections;
 import java.util.HashSet;

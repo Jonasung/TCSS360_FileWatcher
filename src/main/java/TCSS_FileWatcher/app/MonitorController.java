@@ -1,7 +1,11 @@
-package TCSS_FileWatcher;
+package TCSS_FileWatcher.app;
 
 import java.nio.file.Path;
 import java.util.Set;
+
+import TCSS_FileWatcher.domain.QueryCriteria;
+import TCSS_FileWatcher.monitor.FileEventListener;
+import TCSS_FileWatcher.monitor.FileMonitorService;
 
 public class MonitorController {
 
