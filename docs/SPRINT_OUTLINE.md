@@ -1,11 +1,11 @@
-# TCSS360 FileWatcher — 3-Sprint Outline
+# TCSS360 FileWatcher — Sprints 4–6 Outline
 
 **Team:** Jonathan Sung, Abdulrahman Elmi  
-**Goal:** Meet full spec (menus, toolbar, SQLite, query window, export, optional email) with work split evenly across 3 sprints.
+**Goal:** Meet full spec (menus, toolbar, SQLite, query window, export, optional email) with work split evenly across Sprints 4–6.
 
 ---
 
-## Current State (Before last 3 Sprints)
+## Current State (Before Sprints 4–6)
 
 - ✅ WatchService monitoring (create/modify/delete)
 - ✅ Extension filter (QueryCriteria + ExtensionFilter)
@@ -37,7 +37,7 @@ See **docs/PACKAGE_STRUCTURE.md** for where to put each new class and how to mig
 
 ---
 
-# Sprint 1 — Database + Menus/Toolbar and Controls
+# Sprint 4 — Database + Menus/Toolbar and Controls
 
 **Theme:** SQLite in place, main window has proper menus/toolbar and control state.
 
@@ -90,7 +90,7 @@ See **docs/PACKAGE_STRUCTURE.md** for where to put each new class and how to mig
 
 ---
 
-## Sprint 1 Integration
+## Sprint 4 Integration
 
 - Abdulrahman exposes “write events to DB” and “get list of current events / has unsaved events” for Jonathan’s toolbar and exit logic.
 - Jonathan wires toolbar/menu “Write to database” to Abdulrahman’s write method and uses the “unsaved events?” check for exit dialog and button state.
@@ -98,7 +98,7 @@ See **docs/PACKAGE_STRUCTURE.md** for where to put each new class and how to mig
 
 ---
 
-# Sprint 2 — Query Window and Query Types
+# Sprint 5 — Query Window and Query Types
 
 **Theme:** Separate query window; run queries (extension + at least three more); show results; clear DB option.
 
@@ -142,7 +142,7 @@ See **docs/PACKAGE_STRUCTURE.md** for where to put each new class and how to mig
 
 ---
 
-## Sprint 2 Integration
+## Sprint 5 Integration
 
 - Abdulrahman’s query window and table are the single place for all query results; Jonathan’s query logic fills that table.
 - Agree on a simple “query result” DTO or table model so both can contribute (e.g. list of rows with file name, path, event type, date/time).
@@ -150,7 +150,7 @@ See **docs/PACKAGE_STRUCTURE.md** for where to put each new class and how to mig
 
 ---
 
-# Sprint 3 — Export (CSV + Email), Polish, and Submission
+# Sprint 6 — Export (CSV + Email), Polish, and Submission
 
 **Theme:** Export query results to CSV; optional email; final polish and zip for turn-in.
 
@@ -191,7 +191,7 @@ See **docs/PACKAGE_STRUCTURE.md** for where to put each new class and how to mig
 
 ---
 
-## Sprint 3 Integration
+## Sprint 6 Integration
 
 - Abdulrahman’s CSV/email uses the same query result set and table model as the query window.
 - Jonathan’s README documents CSV location and email steps. Both test full flow: monitor → write to DB → query → export to CSV → (optional) email.
