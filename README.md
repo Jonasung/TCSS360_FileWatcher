@@ -8,7 +8,7 @@
 
 **With Gradle (recommended):** From the project root run `./gradlew run` (or `gradlew.bat run` on Windows). This uses the SQLite JDBC dependency defined in `build.gradle`.
 
-**From an IDE:** Open the project as a Gradle project (or set `src/main/java` as source root and add the Gradle/sqlite-jdbc classpath). Run the main class **`TCSS_FileWatcher.app.MainApp`**.
+**From an IDE:** Open the project **as a Gradle project** (open the folder that contains `build.gradle`). That ensures all packages (`app`, `database`, `domain`, `monitor`, `ui`) and the SQLite dependency are on the classpath. Then run **`TCSS_FileWatcher.app.MainApp`**. If you see "cannot resolve" errors, use **Reload/Reimport Gradle Project** (or "Java: Clean Java Language Server Workspace" in VS Code) so the IDE picks up the correct source roots and dependencies.
 
 **Without Gradle:** Compile with `javac` and include the [sqlite-jdbc](https://github.com/xerial/sqlite-jdbc) JAR on the classpath, then run `TCSS_FileWatcher.app.MainApp`.
 

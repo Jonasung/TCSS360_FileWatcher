@@ -1,4 +1,4 @@
-package TCSS_FileWatcher.database;
+package TCSS_FileWatcher.app;
 
 import TCSS_FileWatcher.domain.FileEvent;
 

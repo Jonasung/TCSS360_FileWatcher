@@ -9,8 +9,11 @@ import TCSS_FileWatcher.ui.MainWindow;
 public class MainApp {
     public static void main(String[] args) {
         SwingUtilities.invokeLater(() -> {
+            EventRepository repository = new EventRepository();
+            repository.initSchema();
+
             FileMonitorService monitor = new WatchServiceMonitor();
-            MonitorController controller = new MonitorController(monitor);
+            MonitorController controller = new MonitorController(monitor, repository);
 
             MainWindow window = new MainWindow(controller);
             window.setVisible(true);
