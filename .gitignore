@@ -1,6 +1,10 @@
 # Git for Windows bash crash dump (do not commit)
 bash.exe.stackdump
 
+# Gradle
+.gradle/
+build/
+
 # Common IDE / build
 .idea/
 *.iml

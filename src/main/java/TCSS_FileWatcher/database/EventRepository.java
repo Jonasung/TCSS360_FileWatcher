@@ -1,6 +1,5 @@
 package TCSS_FileWatcher.database;
 
-import TCSS_FileWatcher.domain.EventType;
 import TCSS_FileWatcher.domain.FileEvent;
 
 import java.io.IOException;
@@ -8,14 +7,12 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.sql.*;
-import java.time.Instant;
 
 /**
  * SQLite persistence for file events. Each row: file name, absolute path, event type, date/time.
  */
 public class EventRepository {
 
-    private static final String TABLE_NAME = "file_events";
     private static final String DEFAULT_DB_DIR = ".filewatcher";
     private static final String DEFAULT_DB_FILE = "filewatcher.db";
 
@@ -49,15 +46,13 @@ public class EventRepository {
      * Columns: file_name, absolute_path, event_type, event_datetime (each in its own field).
      */
     public void initSchema() {
-        String sql = """
-            CREATE TABLE IF NOT EXISTS file_events (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                file_name TEXT NOT NULL,
-                absolute_path TEXT NOT NULL,
-                event_type TEXT NOT NULL,
-                event_datetime TEXT NOT NULL
-            )
-            """;
+        String sql = "CREATE TABLE IF NOT EXISTS file_events ("
+            + "id INTEGER PRIMARY KEY AUTOINCREMENT,"
+            + "file_name TEXT NOT NULL,"
+            + "absolute_path TEXT NOT NULL,"
+            + "event_type TEXT NOT NULL,"
+            + "event_datetime TEXT NOT NULL"
+            + ")";
         try (Connection conn = getConnection();
              Statement stmt = conn.createStatement()) {
             stmt.execute(sql);
