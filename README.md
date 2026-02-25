@@ -4,6 +4,14 @@
 - Jonathan Sung
 - Abdulrahman Elmi
 
+## How to Run
+
+**With Gradle (recommended):** From the project root run `./gradlew run` (or `gradlew.bat run` on Windows). This uses the SQLite JDBC dependency defined in `build.gradle`.
+
+**From an IDE:** Open the project as a Gradle project (or set `src/main/java` as source root and add the Gradle/sqlite-jdbc classpath). Run the main class **`TCSS_FileWatcher.app.MainApp`**.
+
+**Without Gradle:** Compile with `javac` and include the [sqlite-jdbc](https://github.com/xerial/sqlite-jdbc) JAR on the classpath, then run `TCSS_FileWatcher.app.MainApp`.
+
 ## Iteration 1 Scope
 - Project setup
 - GitHub repository initialization
