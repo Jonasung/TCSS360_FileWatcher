@@ -43,6 +43,10 @@ public class MonitorController implements FileEventListener {
         return monitor.isRunning();
     }
 
+    public EventRepository getRepository() {
+        return repository;
+    }
+
     public void addListener(FileEventListener listener) {
         monitor.addListener(listener);
     }

@@ -7,6 +7,8 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.sql.*;
+import java.util.ArrayList;
+import java.util.List;
 
 /**
  * SQLite persistence for file events. Each row: file name, absolute path, event type, date/time.
@@ -114,6 +116,70 @@ public class EventRepository {
             }
         } catch (SQLException e) {
             throw new IllegalStateException("Failed to open connection for insertAll", e);
+        }
+    }
+
+    /**
+     * Returns all events whose file name ends with the given extension (case-insensitive).
+     * Extension should not include a dot (e.g. "txt", "java").
+     */
+    public List<EventRecord> queryByExtension(String extension) {
+        if (extension == null || extension.isBlank()) {
+            return queryAll();
+        }
+        String ext = extension.trim().toLowerCase();
+        if (ext.startsWith(".")) ext = ext.substring(1);
+        String sql = "SELECT file_name, absolute_path, event_type, event_datetime FROM file_events "
+            + "WHERE LOWER(file_name) LIKE ?";
+        String pattern = "%." + ext;
+        List<EventRecord> out = new ArrayList<>();
+        try (Connection conn = getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setString(1, pattern);
+            try (ResultSet rs = ps.executeQuery()) {
+                while (rs.next()) {
+                    out.add(new EventRecord(
+                        rs.getString(1),
+                        rs.getString(2),
+                        rs.getString(3),
+                        rs.getString(4)
+                    ));
+                }
+            }
+        } catch (SQLException e) {
+            throw new IllegalStateException("Query by extension failed", e);
+        }
+        return out;
+    }
+
+    /** Returns all events in the database. */
+    public List<EventRecord> queryAll() {
+        String sql = "SELECT file_name, absolute_path, event_type, event_datetime FROM file_events ORDER BY event_datetime";
+        List<EventRecord> out = new ArrayList<>();
+        try (Connection conn = getConnection();
+             Statement stmt = conn.createStatement();
+             ResultSet rs = stmt.executeQuery(sql)) {
+            while (rs.next()) {
+                out.add(new EventRecord(
+                    rs.getString(1),
+                    rs.getString(2),
+                    rs.getString(3),
+                    rs.getString(4)
+                ));
+            }
+        } catch (SQLException e) {
+            throw new IllegalStateException("Query all failed", e);
+        }
+        return out;
+    }
+
+    /** Deletes all rows in file_events. */
+    public void clearAll() {
+        try (Connection conn = getConnection();
+             Statement stmt = conn.createStatement()) {
+            stmt.executeUpdate("DELETE FROM file_events");
+        } catch (SQLException e) {
+            throw new IllegalStateException("Clear all failed", e);
         }
     }
 }

@@ -5,6 +5,7 @@ import javax.swing.*;
 import TCSS_FileWatcher.app.MonitorController;
 import TCSS_FileWatcher.domain.FileEvent;
 import TCSS_FileWatcher.monitor.FileEventListener;
+import TCSS_FileWatcher.ui.query.QueryWindow;
 
 import java.awt.*;
 import java.awt.event.*;
@@ -31,6 +32,8 @@ public class MainWindow extends JFrame implements FileEventListener {
     private JMenuItem miStop;
     private JMenuItem miWriteDb;
     private JMenuItem miExit;
+
+    private QueryWindow queryWindow;
 
     public MainWindow(MonitorController controller) {
         super("TCSS360 FileWatcher - Iteration 4");
@@ -123,6 +126,12 @@ public class MainWindow extends JFrame implements FileEventListener {
         monitor.addSeparator();
         monitor.add(miWriteDb);
 
+        JMenu database = new JMenu("Database");
+        JMenuItem miQuery = new JMenuItem("Query database");
+        miQuery.setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_Q, InputEvent.CTRL_DOWN_MASK));
+        miQuery.addActionListener(e -> openQueryWindow());
+        database.add(miQuery);
+
         JMenu help = new JMenu("Help");
         JMenuItem about = new JMenuItem("About");
         about.setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_F1, 0));
@@ -131,6 +140,7 @@ public class MainWindow extends JFrame implements FileEventListener {
 
         bar.add(file);
         bar.add(monitor);
+        bar.add(database);
         bar.add(help);
 
         return bar;
@@ -156,10 +166,15 @@ public class MainWindow extends JFrame implements FileEventListener {
         tbWrite.setToolTipText("Write current event list to DB (Ctrl+D)");
         tbWrite.addActionListener(e -> writeDbFromUI());
 
+        JButton tbQuery = new JButton("Query DB");
+        tbQuery.setToolTipText("Query database (Ctrl+Q)");
+        tbQuery.addActionListener(e -> openQueryWindow());
+
         tb.add(tbChoose);
         tb.add(tbStart);
         tb.add(tbStop);
         tb.add(tbWrite);
+        tb.add(tbQuery);
 
         chooseBtn.putClientProperty("TB", tbChoose);
         startBtn.putClientProperty("TB", tbStart);
@@ -167,6 +182,13 @@ public class MainWindow extends JFrame implements FileEventListener {
         writeDbBtn.putClientProperty("TB", tbWrite);
 
         return tb;
+    }
+
+    private void openQueryWindow() {
+        if (queryWindow == null) {
+            queryWindow = new QueryWindow(controller.getRepository(), this);
+        }
+        queryWindow.open();
     }
 
     private void wireEvents() {
