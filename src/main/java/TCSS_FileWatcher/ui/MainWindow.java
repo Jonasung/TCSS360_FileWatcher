@@ -37,10 +37,16 @@ public class MainWindow extends JFrame implements FileEventListener {
         this.controller = controller;
         this.controller.addListener(this);
 
-        // Exit prompt needs DO_NOTHING so we can intercept close
         setDefaultCloseOperation(JFrame.DO_NOTHING_ON_CLOSE);
         setSize(900, 600);
         setLocationRelativeTo(null);
+
+        addWindowListener(new WindowAdapter() {
+            @Override
+            public void windowClosing(WindowEvent e) {
+                attemptExit();
+            }
+        });
 
         logArea.setEditable(false);
         logArea.setFont(new Font(Font.MONOSPACED, Font.PLAIN, 12));
@@ -75,15 +81,16 @@ public class MainWindow extends JFrame implements FileEventListener {
         c.gridx = 2; c.gridy = 1; c.weightx = 0;
         top.add(buttons, c);
 
-        add(top, BorderLayout.NORTH);
+        writeDbBtn.setToolTipText("Write current event list to SQLite database");
 
-        // Toolbar
-        add(buildToolBar(), BorderLayout.PAGE_START);
+        JPanel northPanel = new JPanel(new BorderLayout());
+        northPanel.add(buildToolBar(), BorderLayout.PAGE_START);
+        northPanel.add(top, BorderLayout.CENTER);
+        add(northPanel, BorderLayout.NORTH);
 
         add(new JScrollPane(logArea), BorderLayout.CENTER);
 
         wireEvents();
-        wireExitPrompt();
 
         // Initial state
         updateControls();
@@ -149,18 +156,11 @@ public class MainWindow extends JFrame implements FileEventListener {
         tbWrite.setToolTipText("Write current event list to DB (Ctrl+D)");
         tbWrite.addActionListener(e -> writeDbFromUI());
 
-        // Tie toolbar buttons to existing buttons for state updates
-        // (we'll update enabled states manually in updateControls)
         tb.add(tbChoose);
-        tb.addSeparator();
         tb.add(tbStart);
         tb.add(tbStop);
-        tb.addSeparator();
         tb.add(tbWrite);
 
-        // store references by mapping to existing buttons states
-        // (simple: we just sync enabled flags in updateControls())
-        // So here we keep them as client properties:
         chooseBtn.putClientProperty("TB", tbChoose);
         startBtn.putClientProperty("TB", tbStart);
         stopBtn.putClientProperty("TB", tbStop);
@@ -174,14 +174,6 @@ public class MainWindow extends JFrame implements FileEventListener {
         startBtn.addActionListener(e -> startFromUI());
         stopBtn.addActionListener(e -> stopFromUI());
         writeDbBtn.addActionListener(e -> writeDbFromUI());
-    }
-
-    private void wireExitPrompt() {
-        addWindowListener(new WindowAdapter() {
-            @Override public void windowClosing(WindowEvent e) {
-                attemptExit();
-            }
-        });
     }
 
     private void chooseFolder() {
@@ -215,50 +207,76 @@ public class MainWindow extends JFrame implements FileEventListener {
     }
 
     private void writeDbFromUI() {
-        if (!controller.hasAnyEvents()) {
-            JOptionPane.showMessageDialog(this, "No events to write yet.");
-            return;
+        try {
+            int count = controller.writeToDatabase();
+            if (count > 0) {
+                appendLog("=== Written " + count + " event(s) to database ===");
+                JOptionPane.showMessageDialog(this, "Written " + count + " event(s) to database.");
+            } else {
+                JOptionPane.showMessageDialog(this, "No events to write. Start monitoring and generate some events first.");
+            }
+        } catch (Exception ex) {
+            appendLog("=== Write to DB failed: " + ex.getMessage() + " ===");
+            JOptionPane.showMessageDialog(this, "Failed to write to database: " + ex.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
         }
-        controller.writeCurrentListToDb();
-        JOptionPane.showMessageDialog(this, "Write-to-DB requested (stub). Check console output.");
         updateControls();
     }
 
     private void attemptExit() {
+        if (controller.hasUnsavedEvents()) {
+            int choice = JOptionPane.showConfirmDialog(this,
+                "Write current contents to the database before exiting?",
+                "Unsaved events",
+                JOptionPane.YES_NO_CANCEL_OPTION,
+                JOptionPane.QUESTION_MESSAGE);
+            if (choice == JOptionPane.YES_OPTION) {
+                try {
+                    int count = controller.writeToDatabase();
+                    appendLog("=== Written " + count + " event(s) to database before exit ===");
+                    doExit();
+                } catch (Exception ex) {
+                    JOptionPane.showMessageDialog(this, "Failed to write to database: " + ex.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
+                }
+            } else if (choice == JOptionPane.NO_OPTION) {
+                doExit();
+            }
+            return;
+        }
         if (controller.isRunning()) {
-            int choice = JOptionPane.showConfirmDialog(
-                    this,
-                    "Monitoring is currently running.\nStop monitoring and exit?",
-                    "Exit",
-                    JOptionPane.YES_NO_OPTION
-            );
+            int choice = JOptionPane.showConfirmDialog(this,
+                "Monitoring is currently running.\nStop monitoring and exit?",
+                "Exit",
+                JOptionPane.YES_NO_OPTION);
             if (choice != JOptionPane.YES_OPTION) return;
             controller.stopMonitoring();
         } else {
-            int choice = JOptionPane.showConfirmDialog(
-                    this,
-                    "Exit the application?",
-                    "Exit",
-                    JOptionPane.YES_NO_OPTION
-            );
+            int choice = JOptionPane.showConfirmDialog(this,
+                "Exit the application?",
+                "Exit",
+                JOptionPane.YES_NO_OPTION);
             if (choice != JOptionPane.YES_OPTION) return;
+        }
+        doExit();
+    }
+
+    private void doExit() {
+        if (controller.isRunning()) {
+            controller.stopMonitoring();
         }
         dispose();
         System.exit(0);
     }
 
     private void showAbout() {
-        JOptionPane.showMessageDialog(
-                this,
-                "TCSS360 FileWatcher\n\n" +
-                        "Monitor a folder and log file events.\n" +
-                        "Iteration 4: menus, toolbar, shortcuts, enable/disable, exit prompt, DB write stub.\n\n" +
-                        "Developers:\n" +
-                        " - Jonathan Sung\n" +
-                        " - (Partner)\n",
-                "About",
-                JOptionPane.INFORMATION_MESSAGE
-        );
+        JOptionPane.showMessageDialog(this,
+            "TCSS360 FileWatcher\n\n" +
+                "Monitor a folder and log file events.\n" +
+                "Iteration 4: menus, toolbar, shortcuts, SQLite write, exit prompt.\n\n" +
+                "Developers:\n" +
+                " - Jonathan Sung\n" +
+                " - Abdulrahman Elmi",
+            "About",
+            JOptionPane.INFORMATION_MESSAGE);
     }
 
     private void updateControls() {
@@ -274,12 +292,10 @@ public class MainWindow extends JFrame implements FileEventListener {
         boolean canWrite = controller.hasAnyEvents();
         writeDbBtn.setEnabled(canWrite);
 
-        // menu sync
         if (miStart != null) miStart.setEnabled(startBtn.isEnabled());
         if (miStop != null) miStop.setEnabled(stopBtn.isEnabled());
         if (miWriteDb != null) miWriteDb.setEnabled(writeDbBtn.isEnabled());
 
-        // toolbar sync
         syncToolbarEnabled(chooseBtn);
         syncToolbarEnabled(startBtn);
         syncToolbarEnabled(stopBtn);
@@ -298,11 +314,11 @@ public class MainWindow extends JFrame implements FileEventListener {
         if (text == null || text.isBlank()) return set;
 
         Arrays.stream(text.split(","))
-                .map(String::trim)
-                .filter(s -> !s.isEmpty())
-                .map(s -> s.startsWith(".") ? s.substring(1) : s)
-                .map(String::toLowerCase)
-                .forEach(set::add);
+            .map(String::trim)
+            .filter(s -> !s.isEmpty())
+            .map(s -> s.startsWith(".") ? s.substring(1) : s)
+            .map(String::toLowerCase)
+            .forEach(set::add);
 
         return set;
     }
@@ -311,7 +327,7 @@ public class MainWindow extends JFrame implements FileEventListener {
     public void onFileEvent(FileEvent event) {
         SwingUtilities.invokeLater(() -> {
             appendLog(event.toString());
-            updateControls(); // enables "Write DB" after first event
+            updateControls();
         });
     }
 
