@@ -1,4 +1,5 @@
 {
-  "java.configuration.updateBuildConfiguration": "automatic",
-  "java.import.gradle.enabled": true
+  "java.project.sourcePaths": ["src/main/java"],
+  "java.project.referencedLibraries": ["lib/**/*.jar"],
+  "java.project.outputPath": "out"
 }

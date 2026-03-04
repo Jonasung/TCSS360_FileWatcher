@@ -6,11 +6,27 @@
 
 ## How to Run
 
-**With Gradle (recommended):** From the project root run `./gradlew run` (or `gradlew.bat run` on Windows). This uses the SQLite JDBC dependency defined in `build.gradle`.
+**1. Add the SQLite JDBC JAR**
 
-**From an IDE:** Open the project **as a Gradle project** (open the folder that contains `build.gradle`). That ensures all packages (`app`, `database`, `domain`, `monitor`, `ui`) and the SQLite dependency are on the classpath. Then run **`TCSS_FileWatcher.app.MainApp`**. If you see "cannot resolve" errors, use **Reload/Reimport Gradle Project** (or "Java: Clean Java Language Server Workspace" in VS Code) so the IDE picks up the correct source roots and dependencies.
+Download [sqlite-jdbc](https://github.com/xerial/sqlite-jdbc/releases) (e.g. `sqlite-jdbc-3.46.0.0.jar`) and place it in the **`lib/`** folder. See `lib/README.txt`.
 
-**Without Gradle:** Compile with `javac` and include the [sqlite-jdbc](https://github.com/xerial/sqlite-jdbc) JAR on the classpath, then run `TCSS_FileWatcher.app.MainApp`.
+**2. Compile and run from the project root**
+
+**Windows (Command Prompt or PowerShell):**
+```bat
+javac -cp "lib/*" -d out -sourcepath src/main/java src/main/java/TCSS_FileWatcher/app/MainApp.java
+java -cp "out;lib/*" TCSS_FileWatcher.app.MainApp
+```
+
+**Mac / Linux:**
+```bash
+javac -cp "lib/*" -d out -sourcepath src/main/java src/main/java/TCSS_FileWatcher/app/MainApp.java
+java -cp "out:lib/*" TCSS_FileWatcher.app.MainApp
+```
+
+**3. From an IDE**
+
+Open the project folder. Set **source root** to `src/main/java` and add **`lib/*.jar`** to the classpath. In VS Code, `.vscode/settings.json` already points to `lib/**/*.jar`. Run the main class **`TCSS_FileWatcher.app.MainApp`**.
 
 ## Iteration 1 Scope
 - Project setup
