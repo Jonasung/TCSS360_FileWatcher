@@ -4,6 +4,30 @@
 - Jonathan Sung
 - Abdulrahman Elmi
 
+## How to Run
+
+**1. Add the SQLite JDBC JAR**
+
+Download [sqlite-jdbc](https://github.com/xerial/sqlite-jdbc/releases) (e.g. `sqlite-jdbc-3.46.0.0.jar`) and place it in the **`lib/`** folder. See `lib/README.txt`.
+
+**2. Compile and run from the project root**
+
+**Windows (Command Prompt or PowerShell):**
+```bat
+javac -cp "lib/*" -d out -sourcepath src/main/java src/main/java/TCSS_FileWatcher/app/MainApp.java
+java -cp "out;lib/*" TCSS_FileWatcher.app.MainApp
+```
+
+**Mac / Linux:**
+```bash
+javac -cp "lib/*" -d out -sourcepath src/main/java src/main/java/TCSS_FileWatcher/app/MainApp.java
+java -cp "out:lib/*" TCSS_FileWatcher.app.MainApp
+```
+
+**3. From an IDE**
+
+Open the project folder. Set **source root** to `src/main/java` and add **`lib/*.jar`** to the classpath. In VS Code, `.vscode/settings.json` already points to `lib/**/*.jar`. Run the main class **`TCSS_FileWatcher.app.MainApp`**.
+
 ## Iteration 1 Scope
 - Project setup
 - GitHub repository initialization

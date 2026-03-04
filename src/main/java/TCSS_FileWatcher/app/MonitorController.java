@@ -2,32 +2,35 @@ package TCSS_FileWatcher.app;
 
 import java.nio.file.Path;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
 import java.util.Set;
+import java.util.concurrent.CopyOnWriteArrayList;
 
 import TCSS_FileWatcher.domain.FileEvent;
 import TCSS_FileWatcher.domain.QueryCriteria;
 import TCSS_FileWatcher.monitor.FileEventListener;
 import TCSS_FileWatcher.monitor.FileMonitorService;
 
-public class MonitorController {
+public class MonitorController implements FileEventListener {
 
     private final FileMonitorService monitor;
+    private final EventRepository repository;
+    private final List<FileEvent> eventBuffer = new CopyOnWriteArrayList<>();
 
-    // "current list" of events (for UI + DB write)
-    private final List<FileEvent> currentEvents = Collections.synchronizedList(new ArrayList<>());
-
-    // internal listener to accumulate events
-    private final FileEventListener collector = currentEvents::add;
-
-    public MonitorController(FileMonitorService monitor) {
+    public MonitorController(FileMonitorService monitor, EventRepository repository) {
         this.monitor = monitor;
-        this.monitor.addListener(collector);
+        this.repository = repository;
+        this.monitor.addListener(this);
+    }
+
+    @Override
+    public void onFileEvent(FileEvent event) {
+        if (event != null) {
+            eventBuffer.add(event);
+        }
     }
 
     public void startMonitoring(Path directory, Set<String> extensions) {
-        currentEvents.clear(); // reset for a new run
         QueryCriteria criteria = new QueryCriteria(extensions);
         monitor.start(directory, criteria);
     }
@@ -48,30 +51,28 @@ public class MonitorController {
         monitor.removeListener(listener);
     }
 
-    /** Snapshot of current events for UI / DB export */
-    public List<FileEvent> getCurrentEventsSnapshot() {
-        synchronized (currentEvents) {
-            return new ArrayList<>(currentEvents);
-        }
-    }
-
-    public boolean hasAnyEvents() {
-        synchronized (currentEvents) {
-            return !currentEvents.isEmpty();
-        }
-    }
-
     /**
-     * Iteration 4 stub: "Write current list to DB".
-     * Partner can wire this to DatabaseService later.
+     * Writes all buffered events to the database and clears the buffer.
+     * @return number of events written
      */
-    public void writeCurrentListToDb() {
-        List<FileEvent> snapshot = getCurrentEventsSnapshot();
+    public int writeToDatabase() {
+        if (eventBuffer.isEmpty()) {
+            return 0;
+        }
+        repository.initSchema();
+        List<FileEvent> snapshot = new ArrayList<>(eventBuffer);
+        repository.insertAll(snapshot);
+        eventBuffer.clear();
+        return snapshot.size();
+    }
 
-        // TODO (Iteration 4/5): call DatabaseService here, e.g.
-        // databaseService.insertEvents(snapshot);
+    /** Returns true if there are events in the buffer not yet written to the database. */
+    public boolean hasUnsavedEvents() {
+        return !eventBuffer.isEmpty();
+    }
 
-        // For now: no-op but keeps UI flow complete.
-        System.out.println("Write to DB requested. Events count=" + snapshot.size());
+    /** Returns true if there are any events (for UI enable/disable). */
+    public boolean hasAnyEvents() {
+        return !eventBuffer.isEmpty();
     }
 }
