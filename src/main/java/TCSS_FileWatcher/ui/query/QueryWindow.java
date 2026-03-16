@@ -5,168 +5,179 @@ import TCSS_FileWatcher.domain.EventType;
 import TCSS_FileWatcher.domain.FileEvent;
 import TCSS_FileWatcher.export.CsvExportService;
 
-import javax.swing.*;
+import javax.swing.BorderFactory;
+import javax.swing.Box;
+import javax.swing.BoxLayout;
+import javax.swing.ButtonGroup;
+import javax.swing.JButton;
+import javax.swing.JComboBox;
+import javax.swing.JFileChooser;
+import javax.swing.JFrame;
+import javax.swing.JLabel;
+import javax.swing.JOptionPane;
+import javax.swing.JPanel;
+import javax.swing.JRadioButton;
+import javax.swing.JScrollPane;
+import javax.swing.JSplitPane;
+import javax.swing.JTable;
+import javax.swing.JTextField;
 import javax.swing.table.DefaultTableModel;
-import java.awt.*;
+import java.awt.BorderLayout;
+import java.awt.FlowLayout;
 import java.io.File;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
 import java.util.List;
+import java.util.Objects;
 
-public class QueryWindow extends JFrame {
+/**
+ * UI for running queries over captured file events.
+ */
+public final class QueryWindow extends JFrame {
+
+    private static final long serialVersionUID = 1L;
+
+    private static final DateTimeFormatter INPUT_FORMAT = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm");
+    private static final String DEFAULT_FROM_DATE = "2026-01-01 00:00";
+    private static final String DEFAULT_TO_DATE = "2026-12-31 23:59";
 
     private final QueryController myQueryController;
 
-    // inputs
-    private final JTextField myExtField = new JTextField("txt");
-    private final JTextField myFromField = new JTextField("2026-01-01 00:00");
-    private final JTextField myToField = new JTextField("2026-12-31 23:59");
-    private final JComboBox<EventType> myTypeBox = new JComboBox<>(EventType.values());
-    private final JTextField myPathField = new JTextField();
+    private final JTextField myExtensionField;
+    private final JTextField myFromField;
+    private final JTextField myToField;
+    private final JComboBox<EventType> myTypeBox;
+    private final JTextField myPathField;
 
-    private final JButton myRunBtn = new JButton("Run Query");
-    private final JButton myClearBtn = new JButton("Clear Results");
-    private final JButton myExportBtn = new JButton("Export to CSV");
+    private final JButton myRunButton;
+    private final JButton myClearButton;
+    private final JButton myExportButton;
 
-    // selection
-    private final JRadioButton myRbExt = new JRadioButton("By Extension", true);
-    private final JRadioButton myRbDate = new JRadioButton("By Date Range");
-    private final JRadioButton myRbType = new JRadioButton("By Activity Type");
-    private final JRadioButton myRbPath = new JRadioButton("By Path/Directory");
+    private final JRadioButton myByExtensionButton;
+    private final JRadioButton myByDateButton;
+    private final JRadioButton myByTypeButton;
+    private final JRadioButton myByPathButton;
 
-    // table
-    private final DefaultTableModel myModel = new DefaultTableModel(
-            new Object[]{"File Name", "Extension", "Path", "Activity", "Date/Time"}, 0
-    ) {
-        @Override
-        public boolean isCellEditable(final int theRow, final int theColumn) {
-            return false;
-        }
-    };
+    private final DefaultTableModel myTableModel;
+    private final JTable myResultsTable;
 
-    private final JTable myTable = new JTable(myModel);
-
-    private static final DateTimeFormatter INPUT_FMT =
-            DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm");
-
-    // store last query info for CSV header
-    private String myLastQueryDescription = "No query has been run yet.";
+    private String myLastQueryDescription;
 
     public QueryWindow(final QueryController theQueryController) {
         super("FileWatcher - Query Window");
 
-        if (theQueryController == null) {
-            throw new IllegalArgumentException("QueryController cannot be null.");
-        }
+        myQueryController = Objects.requireNonNull(theQueryController, "QueryController cannot be null.");
+        myExtensionField = new JTextField("txt");
+        myFromField = new JTextField(DEFAULT_FROM_DATE);
+        myToField = new JTextField(DEFAULT_TO_DATE);
+        myTypeBox = new JComboBox<>(EventType.values());
+        myPathField = new JTextField();
 
-        myQueryController = theQueryController;
+        myRunButton = new JButton("Run Query");
+        myClearButton = new JButton("Clear Results");
+        myExportButton = new JButton("Export to CSV");
 
-        setSize(1000, 600);
-        setLocationRelativeTo(null);
-        setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
+        myByExtensionButton = new JRadioButton("By Extension", true);
+        myByDateButton = new JRadioButton("By Date Range");
+        myByTypeButton = new JRadioButton("By Activity Type");
+        myByPathButton = new JRadioButton("By Path/Directory");
 
-        buildUI();
+        myTableModel = new DefaultTableModel(
+                new Object[]{"File Name", "Extension", "Path", "Activity", "Date/Time"},
+                0) {
+            @Override
+            public boolean isCellEditable(final int theRow, final int theColumn) {
+                return false;
+            }
+        };
+        myResultsTable = new JTable(myTableModel);
+        myLastQueryDescription = "No query has been run yet.";
+
+        initializeWindow();
+        buildUserInterface();
         wireEvents();
         updateFormEnabled();
     }
 
-    private void buildUI() {
+    private void initializeWindow() {
+        setSize(1000, 600);
+        setLocationRelativeTo(null);
+        setDefaultCloseOperation(DISPOSE_ON_CLOSE);
+    }
+
+    private void buildUserInterface() {
         final ButtonGroup group = new ButtonGroup();
-        group.add(myRbExt);
-        group.add(myRbDate);
-        group.add(myRbType);
-        group.add(myRbPath);
+        group.add(myByExtensionButton);
+        group.add(myByDateButton);
+        group.add(myByTypeButton);
+        group.add(myByPathButton);
 
-        final JPanel left = new JPanel();
-        left.setLayout(new BoxLayout(left, BoxLayout.Y_AXIS));
-        left.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
+        final JPanel leftPanel = new JPanel();
+        leftPanel.setLayout(new BoxLayout(leftPanel, BoxLayout.Y_AXIS));
+        leftPanel.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
 
-        left.add(new JLabel("Query Type"));
-        left.add(myRbExt);
-        left.add(myRbDate);
-        left.add(myRbType);
-        left.add(myRbPath);
+        leftPanel.add(new JLabel("Query Type"));
+        leftPanel.add(myByExtensionButton);
+        leftPanel.add(myByDateButton);
+        leftPanel.add(myByTypeButton);
+        leftPanel.add(myByPathButton);
 
-        left.add(Box.createVerticalStrut(12));
-        left.add(new JLabel("Extension (e.g. txt, java)"));
-        left.add(myExtField);
+        leftPanel.add(Box.createVerticalStrut(12));
+        leftPanel.add(new JLabel("Extension (e.g. txt, java)"));
+        leftPanel.add(myExtensionField);
 
-        left.add(Box.createVerticalStrut(12));
-        left.add(new JLabel("From (yyyy-MM-dd HH:mm)"));
-        left.add(myFromField);
-        left.add(new JLabel("To (yyyy-MM-dd HH:mm)"));
-        left.add(myToField);
+        leftPanel.add(Box.createVerticalStrut(12));
+        leftPanel.add(new JLabel("From (yyyy-MM-dd HH:mm)"));
+        leftPanel.add(myFromField);
+        leftPanel.add(new JLabel("To (yyyy-MM-dd HH:mm)"));
+        leftPanel.add(myToField);
 
-        left.add(Box.createVerticalStrut(12));
-        left.add(new JLabel("Activity Type"));
-        left.add(myTypeBox);
+        leftPanel.add(Box.createVerticalStrut(12));
+        leftPanel.add(new JLabel("Activity Type"));
+        leftPanel.add(myTypeBox);
 
-        left.add(Box.createVerticalStrut(12));
-        left.add(new JLabel("Path/Directory"));
-        left.add(myPathField);
+        leftPanel.add(Box.createVerticalStrut(12));
+        leftPanel.add(new JLabel("Path/Directory"));
+        leftPanel.add(myPathField);
 
-        left.add(Box.createVerticalStrut(12));
-        final JPanel buttons = new JPanel(new FlowLayout(FlowLayout.LEFT));
-        buttons.add(myRunBtn);
-        buttons.add(myClearBtn);
-        buttons.add(myExportBtn);
-        left.add(buttons);
+        leftPanel.add(Box.createVerticalStrut(12));
+        final JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.LEFT));
+        buttonPanel.add(myRunButton);
+        buttonPanel.add(myClearButton);
+        buttonPanel.add(myExportButton);
+        leftPanel.add(buttonPanel);
 
-        final JScrollPane right = new JScrollPane(myTable);
-        myTable.setFillsViewportHeight(true);
+        myResultsTable.setFillsViewportHeight(true);
+        final JScrollPane rightPanel = new JScrollPane(myResultsTable);
+        final JSplitPane splitPane = new JSplitPane(JSplitPane.HORIZONTAL_SPLIT, leftPanel, rightPanel);
+        splitPane.setResizeWeight(0.30);
 
-        final JSplitPane split = new JSplitPane(JSplitPane.HORIZONTAL_SPLIT, left, right);
-        split.setResizeWeight(0.30);
-
-        add(split, BorderLayout.CENTER);
+        add(splitPane, BorderLayout.CENTER);
     }
 
     private void wireEvents() {
-        myRbExt.addActionListener(e -> updateFormEnabled());
-        myRbDate.addActionListener(e -> updateFormEnabled());
-        myRbType.addActionListener(e -> updateFormEnabled());
-        myRbPath.addActionListener(e -> updateFormEnabled());
+        myByExtensionButton.addActionListener(theEvent -> updateFormEnabled());
+        myByDateButton.addActionListener(theEvent -> updateFormEnabled());
+        myByTypeButton.addActionListener(theEvent -> updateFormEnabled());
+        myByPathButton.addActionListener(theEvent -> updateFormEnabled());
 
-        myRunBtn.addActionListener(e -> runQuery());
-        myClearBtn.addActionListener(e -> clearResults());
-        myExportBtn.addActionListener(e -> exportResults());
+        myRunButton.addActionListener(theEvent -> runQuery());
+        myClearButton.addActionListener(theEvent -> clearResults());
+        myExportButton.addActionListener(theEvent -> exportResults());
     }
 
     private void updateFormEnabled() {
-        final boolean byExt = myRbExt.isSelected();
-        final boolean byDate = myRbDate.isSelected();
-        final boolean byType = myRbType.isSelected();
-        final boolean byPath = myRbPath.isSelected();
-
-        myExtField.setEnabled(byExt);
-        myFromField.setEnabled(byDate);
-        myToField.setEnabled(byDate);
-        myTypeBox.setEnabled(byType);
-        myPathField.setEnabled(byPath);
+        myExtensionField.setEnabled(myByExtensionButton.isSelected());
+        myFromField.setEnabled(myByDateButton.isSelected());
+        myToField.setEnabled(myByDateButton.isSelected());
+        myTypeBox.setEnabled(myByTypeButton.isSelected());
+        myPathField.setEnabled(myByPathButton.isSelected());
     }
 
     private void runQuery() {
         try {
-            final List<FileEvent> results;
-
-            if (myRbExt.isSelected()) {
-                myLastQueryDescription = "Query Type: Extension | Value: " + myExtField.getText().trim();
-                results = myQueryController.queryByExtension(myExtField.getText());
-            } else if (myRbDate.isSelected()) {
-                final LocalDateTime from = parseDate(myFromField.getText());
-                final LocalDateTime to = parseDate(myToField.getText());
-                myLastQueryDescription = "Query Type: Date Range | From: " + from + " | To: " + to;
-                results = myQueryController.queryByDateRange(from, to);
-            } else if (myRbType.isSelected()) {
-                final EventType type = (EventType) myTypeBox.getSelectedItem();
-                myLastQueryDescription = "Query Type: Activity | Value: " + type;
-                results = myQueryController.queryByEventType(type);
-            } else {
-                myLastQueryDescription = "Query Type: Path/Directory | Value: " + myPathField.getText().trim();
-                results = myQueryController.queryByPathPrefix(myPathField.getText());
-            }
-
+            final List<FileEvent> results = determineQueryResults();
             loadResults(results);
 
             if (results.isEmpty()) {
@@ -177,27 +188,47 @@ public class QueryWindow extends JFrame {
                         JOptionPane.INFORMATION_MESSAGE
                 );
             }
-
-        } catch (IllegalArgumentException ex) {
+        } catch (final IllegalArgumentException theException) {
             JOptionPane.showMessageDialog(
                     this,
-                    ex.getMessage(),
+                    theException.getMessage(),
                     "Invalid Input",
                     JOptionPane.WARNING_MESSAGE
             );
-        } catch (Exception ex) {
+        } catch (final RuntimeException theException) {
             JOptionPane.showMessageDialog(
                     this,
                     "Query failed due to an unexpected error.\nPlease try again.",
                     "Error",
                     JOptionPane.ERROR_MESSAGE
             );
-            ex.printStackTrace();
+            theException.printStackTrace();
         }
     }
 
+    private List<FileEvent> determineQueryResults() {
+        if (myByExtensionButton.isSelected()) {
+            myLastQueryDescription = "Query Type: Extension | Value: " + myExtensionField.getText().trim();
+            return myQueryController.queryByExtension(myExtensionField.getText());
+        }
+        if (myByDateButton.isSelected()) {
+            final LocalDateTime from = parseDate(myFromField.getText());
+            final LocalDateTime to = parseDate(myToField.getText());
+            myLastQueryDescription = "Query Type: Date Range | From: " + from + " | To: " + to;
+            return myQueryController.queryByDateRange(from, to);
+        }
+        if (myByTypeButton.isSelected()) {
+            final EventType selectedType = (EventType) myTypeBox.getSelectedItem();
+            myLastQueryDescription = "Query Type: Activity | Value: " + selectedType;
+            return myQueryController.queryByEventType(selectedType);
+        }
+
+        myLastQueryDescription = "Query Type: Path/Directory | Value: " + myPathField.getText().trim();
+        return myQueryController.queryByPathPrefix(myPathField.getText());
+    }
+
     private void exportResults() {
-        if (myModel.getRowCount() == 0) {
+        if (myTableModel.getRowCount() == 0) {
             JOptionPane.showMessageDialog(
                     this,
                     "There are no query results to export.",
@@ -211,8 +242,7 @@ public class QueryWindow extends JFrame {
         chooser.setDialogTitle("Save Query Results as CSV");
         chooser.setSelectedFile(new File("query_results.csv"));
 
-        final int result = chooser.showSaveDialog(this);
-        if (result != JFileChooser.APPROVE_OPTION) {
+        if (chooser.showSaveDialog(this) != JFileChooser.APPROVE_OPTION) {
             return;
         }
 
@@ -221,7 +251,7 @@ public class QueryWindow extends JFrame {
             final File exportedFile = exportService.exportTableToCsv(
                     chooser.getSelectedFile(),
                     myLastQueryDescription,
-                    myModel
+                    myTableModel
             );
 
             JOptionPane.showMessageDialog(
@@ -230,11 +260,10 @@ public class QueryWindow extends JFrame {
                     "Export Successful",
                     JOptionPane.INFORMATION_MESSAGE
             );
-
-        } catch (Exception ex) {
+        } catch (final RuntimeException theException) {
             JOptionPane.showMessageDialog(
                     this,
-                    "Failed to export CSV:\n" + ex.getMessage(),
+                    "Failed to export CSV:\n" + theException.getMessage(),
                     "Export Error",
                     JOptionPane.ERROR_MESSAGE
             );
@@ -243,8 +272,8 @@ public class QueryWindow extends JFrame {
 
     private LocalDateTime parseDate(final String theText) {
         try {
-            return LocalDateTime.parse(theText.trim(), INPUT_FMT);
-        } catch (DateTimeParseException ex) {
+            return LocalDateTime.parse(theText.trim(), INPUT_FORMAT);
+        } catch (final DateTimeParseException theException) {
             throw new IllegalArgumentException("Invalid date format. Use: yyyy-MM-dd HH:mm");
         }
     }
@@ -253,25 +282,27 @@ public class QueryWindow extends JFrame {
         clearResults();
 
         for (final FileEvent event : theResults) {
-            final String fileName = event.getPath().getFileName().toString();
-            final String ext = getExtension(fileName);
+            final String fileName = event.getPath().getFileName() == null
+                    ? event.getPath().toString()
+                    : event.getPath().getFileName().toString();
+            final String extension = getExtension(fileName);
             final String path = event.getPath().toString();
             final String activity = event.getType().name();
             final String dateTime = event.getTimestamp().toString();
 
-            myModel.addRow(new Object[]{fileName, ext, path, activity, dateTime});
+            myTableModel.addRow(new Object[]{fileName, extension, path, activity, dateTime});
         }
     }
 
     private void clearResults() {
-        myModel.setRowCount(0);
+        myTableModel.setRowCount(0);
     }
 
     private static String getExtension(final String theFileName) {
-        final int dot = theFileName.lastIndexOf('.');
-        if (dot < 0 || dot == theFileName.length() - 1) {
+        final int dotIndex = theFileName.lastIndexOf('.');
+        if (dotIndex < 0 || dotIndex == theFileName.length() - 1) {
             return "";
         }
-        return theFileName.substring(dot + 1).toLowerCase();
+        return theFileName.substring(dotIndex + 1).toLowerCase();
     }
 }

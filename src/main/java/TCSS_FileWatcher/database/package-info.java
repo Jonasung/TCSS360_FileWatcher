@@ -1,4 +1,4 @@
 /**
- * SQLite persistence: schema, insert, query, clear. (Sprint 1 – Person A)
+ * Placeholder package for database-related classes if the project is expanded later.
  */
 package TCSS_FileWatcher.database;

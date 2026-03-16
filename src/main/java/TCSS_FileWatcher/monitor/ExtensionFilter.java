@@ -1,20 +1,35 @@
 package TCSS_FileWatcher.monitor;
 
-import java.nio.file.Path;
-
 import TCSS_FileWatcher.domain.QueryCriteria;
 
+import java.nio.file.Path;
+import java.util.Objects;
+
+/**
+ * Utility class for extension-based file filtering.
+ */
 public final class ExtensionFilter {
-    private ExtensionFilter() {}
 
-    public static boolean matches(Path path, QueryCriteria criteria) {
-        if (criteria == null || !criteria.hasExtensionFilter()) return true;
+    private ExtensionFilter() {
+        // Utility class.
+    }
 
-        String name = path.getFileName().toString();
-        int dot = name.lastIndexOf('.');
-        if (dot < 0 || dot == name.length() - 1) return false;
+    public static boolean matches(final Path thePath,
+                                  final QueryCriteria theCriteria) {
+        Objects.requireNonNull(thePath, "Path cannot be null.");
 
-        String ext = name.substring(dot + 1).toLowerCase();
-        return criteria.getAllowedExtensions().contains(ext);
+        if (theCriteria == null || !theCriteria.hasExtensionFilter()) {
+            return true;
+        }
+
+        final Path fileName = thePath.getFileName();
+        final String name = fileName == null ? thePath.toString() : fileName.toString();
+        final int dotIndex = name.lastIndexOf('.');
+        if (dotIndex < 0 || dotIndex == name.length() - 1) {
+            return false;
+        }
+
+        final String extension = name.substring(dotIndex + 1).toLowerCase();
+        return theCriteria.getAllowedExtensions().contains(extension);
     }
 }

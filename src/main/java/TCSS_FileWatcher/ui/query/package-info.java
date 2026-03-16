@@ -1,4 +1,4 @@
 /**
- * Query window: run queries (extension, date range, activity, path), results table, clear DB. (Sprint 2)
+ * Query UI for filtering captured events and exporting results.
  */
 package TCSS_FileWatcher.ui.query;

@@ -1,13 +1,21 @@
 package TCSS_FileWatcher.monitor;
 
-import java.nio.file.Path;
-
 import TCSS_FileWatcher.domain.QueryCriteria;
 
+import java.nio.file.Path;
+
+/**
+ * Abstraction for a service that watches a directory for file changes.
+ */
 public interface FileMonitorService {
-    void start(Path directory, QueryCriteria criteria);
+
+    void start(Path theDirectory, QueryCriteria theCriteria);
+
     void stop();
+
     boolean isRunning();
-    void addListener(FileEventListener listener);
-    void removeListener(FileEventListener listener);
+
+    void addListener(FileEventListener theListener);
+
+    void removeListener(FileEventListener theListener);
 }

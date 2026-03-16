@@ -1,21 +1,29 @@
 package TCSS_FileWatcher.app;
 
-import javax.swing.*;
-
 import TCSS_FileWatcher.monitor.FileMonitorService;
 import TCSS_FileWatcher.monitor.WatchServiceMonitor;
 import TCSS_FileWatcher.ui.MainWindow;
 
-public class MainApp {
-    public static void main(String[] args) {
+import javax.swing.SwingUtilities;
+
+/**
+ * Application entry point.
+ */
+public final class MainApp {
+
+    private MainApp() {
+        // Utility class.
+    }
+
+    public static void main(final String[] theArgs) {
         SwingUtilities.invokeLater(() -> {
-            EventRepository repository = new EventRepository();
+            final EventRepository repository = new EventRepository();
             repository.initSchema();
 
-            FileMonitorService monitor = new WatchServiceMonitor();
-            MonitorController controller = new MonitorController(monitor, repository);
+            final FileMonitorService monitor = new WatchServiceMonitor();
+            final MonitorController controller = new MonitorController(monitor, repository);
 
-            MainWindow window = new MainWindow(controller);
+            final MainWindow window = new MainWindow(controller);
             window.setVisible(true);
         });
     }

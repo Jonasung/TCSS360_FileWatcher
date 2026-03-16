@@ -1,349 +1,430 @@
 package TCSS_FileWatcher.ui;
 
-import javax.swing.*;
-
 import TCSS_FileWatcher.app.MonitorController;
+import TCSS_FileWatcher.app.QueryController;
 import TCSS_FileWatcher.domain.FileEvent;
 import TCSS_FileWatcher.monitor.FileEventListener;
-import TCSS_FileWatcher.app.QueryController;
 import TCSS_FileWatcher.ui.query.QueryWindow;
 
-import java.awt.*;
-import java.awt.event.*;
+import javax.swing.BorderFactory;
+import javax.swing.JButton;
+import javax.swing.JFileChooser;
+import javax.swing.JFrame;
+import javax.swing.JLabel;
+import javax.swing.JMenu;
+import javax.swing.JMenuBar;
+import javax.swing.JMenuItem;
+import javax.swing.JOptionPane;
+import javax.swing.JPanel;
+import javax.swing.JScrollPane;
+import javax.swing.JTextArea;
+import javax.swing.JTextField;
+import javax.swing.JToolBar;
+import javax.swing.KeyStroke;
+import javax.swing.SwingUtilities;
+import java.awt.BorderLayout;
+import java.awt.FlowLayout;
+import java.awt.Font;
+import java.awt.GridBagConstraints;
+import java.awt.GridBagLayout;
+import java.awt.Insets;
+import java.awt.event.InputEvent;
+import java.awt.event.KeyEvent;
+import java.awt.event.WindowAdapter;
+import java.awt.event.WindowEvent;
 import java.nio.file.Path;
 import java.util.Arrays;
-import java.util.HashSet;
+import java.util.LinkedHashSet;
 import java.util.Set;
 
-public class MainWindow extends JFrame implements FileEventListener {
+/**
+ * Main application window for monitoring directories and managing captured events.
+ */
+public final class MainWindow extends JFrame implements FileEventListener {
 
-    private final MonitorController controller;
+    private static final long serialVersionUID = 1L;
 
-    private final JTextField dirField = new JTextField();
-    private final JTextField extField = new JTextField("txt,java");
-    private final JTextArea logArea = new JTextArea();
+    private static final String APPLICATION_TITLE = "TCSS360 FileWatcher";
+    private static final String DEFAULT_EXTENSIONS = "txt,java";
+    private static final String TOOLBAR_BUTTON_KEY = "toolbarButton";
 
-    private final JButton chooseBtn = new JButton("Choose Folder");
-    private final JButton startBtn = new JButton("Start");
-    private final JButton stopBtn = new JButton("Stop");
-    private final JButton writeDbBtn = new JButton("Write to DB");
+    private final MonitorController myController;
+    private final QueryController myQueryController;
 
-    // Menu items (so we can enable/disable consistently)
-    private JMenuItem miStart;
-    private JMenuItem miStop;
-    private JMenuItem miWriteDb;
-    private JMenuItem miExit;
+    private final JTextField myDirectoryField;
+    private final JTextField myExtensionField;
+    private final JTextArea myLogArea;
 
-    public MainWindow(MonitorController controller) {
-        super("TCSS360 FileWatcher - Iteration 4");
-        this.controller = controller;
-        this.controller.addListener(this);
+    private final JButton myChooseButton;
+    private final JButton myStartButton;
+    private final JButton myStopButton;
+    private final JButton myWriteDatabaseButton;
 
-        setDefaultCloseOperation(JFrame.DO_NOTHING_ON_CLOSE);
+    private JMenuItem myStartMenuItem;
+    private JMenuItem myStopMenuItem;
+    private JMenuItem myWriteDatabaseMenuItem;
+
+    public MainWindow(final MonitorController theController) {
+        super(APPLICATION_TITLE);
+
+        myController = java.util.Objects.requireNonNull(theController, "MonitorController cannot be null.");
+        myQueryController = new QueryController(myController);
+        myController.addListener(this);
+
+        myDirectoryField = new JTextField();
+        myExtensionField = new JTextField(DEFAULT_EXTENSIONS);
+        myLogArea = new JTextArea();
+
+        myChooseButton = new JButton("Choose Folder");
+        myStartButton = new JButton("Start");
+        myStopButton = new JButton("Stop");
+        myWriteDatabaseButton = new JButton("Write to DB");
+
+        initializeWindow();
+        buildLayout();
+        wireEvents();
+        updateControls();
+    }
+
+    private void initializeWindow() {
+        setDefaultCloseOperation(DO_NOTHING_ON_CLOSE);
         setSize(900, 600);
         setLocationRelativeTo(null);
-
         addWindowListener(new WindowAdapter() {
             @Override
-            public void windowClosing(WindowEvent e) {
+            public void windowClosing(final WindowEvent theEvent) {
                 attemptExit();
             }
         });
 
-        logArea.setEditable(false);
-        logArea.setFont(new Font(Font.MONOSPACED, Font.PLAIN, 12));
-
+        myLogArea.setEditable(false);
+        myLogArea.setFont(new Font(Font.MONOSPACED, Font.PLAIN, 12));
+        myWriteDatabaseButton.setToolTipText("Write the current event list to the SQLite database.");
         setJMenuBar(buildMenuBar());
+    }
 
-        JPanel top = new JPanel(new GridBagLayout());
-        GridBagConstraints c = new GridBagConstraints();
-        c.insets = new Insets(6, 6, 6, 6);
-        c.fill = GridBagConstraints.HORIZONTAL;
+    private void buildLayout() {
+        final JPanel topPanel = new JPanel(new GridBagLayout());
+        final GridBagConstraints constraints = new GridBagConstraints();
+        constraints.insets = new Insets(6, 6, 6, 6);
+        constraints.fill = GridBagConstraints.HORIZONTAL;
 
-        c.gridx = 0; c.gridy = 0; c.weightx = 0;
-        top.add(new JLabel("Directory:"), c);
+        constraints.gridx = 0;
+        constraints.gridy = 0;
+        constraints.weightx = 0;
+        topPanel.add(new JLabel("Directory:"), constraints);
 
-        c.gridx = 1; c.gridy = 0; c.weightx = 1;
-        top.add(dirField, c);
+        constraints.gridx = 1;
+        constraints.weightx = 1;
+        topPanel.add(myDirectoryField, constraints);
 
-        c.gridx = 2; c.gridy = 0; c.weightx = 0;
-        top.add(chooseBtn, c);
+        constraints.gridx = 2;
+        constraints.weightx = 0;
+        topPanel.add(myChooseButton, constraints);
 
-        c.gridx = 0; c.gridy = 1; c.weightx = 0;
-        top.add(new JLabel("Extensions (comma):"), c);
+        constraints.gridx = 0;
+        constraints.gridy = 1;
+        topPanel.add(new JLabel("Extensions (comma):"), constraints);
 
-        c.gridx = 1; c.gridy = 1; c.weightx = 1;
-        top.add(extField, c);
+        constraints.gridx = 1;
+        constraints.weightx = 1;
+        topPanel.add(myExtensionField, constraints);
 
-        JPanel buttons = new JPanel(new FlowLayout(FlowLayout.LEFT));
-        buttons.add(startBtn);
-        buttons.add(stopBtn);
-        buttons.add(writeDbBtn);
+        final JPanel actionPanel = new JPanel(new FlowLayout(FlowLayout.LEFT));
+        actionPanel.add(myStartButton);
+        actionPanel.add(myStopButton);
+        actionPanel.add(myWriteDatabaseButton);
 
-        c.gridx = 2; c.gridy = 1; c.weightx = 0;
-        top.add(buttons, c);
+        constraints.gridx = 2;
+        constraints.weightx = 0;
+        topPanel.add(actionPanel, constraints);
 
-        writeDbBtn.setToolTipText("Write current event list to SQLite database");
-
-        JPanel northPanel = new JPanel(new BorderLayout());
+        final JPanel northPanel = new JPanel(new BorderLayout());
         northPanel.add(buildToolBar(), BorderLayout.PAGE_START);
-        northPanel.add(top, BorderLayout.CENTER);
+        northPanel.add(topPanel, BorderLayout.CENTER);
+
         add(northPanel, BorderLayout.NORTH);
-
-        add(new JScrollPane(logArea), BorderLayout.CENTER);
-
-        wireEvents();
-
-        // Initial state
-        updateControls();
+        add(new JScrollPane(myLogArea), BorderLayout.CENTER);
     }
 
     private JMenuBar buildMenuBar() {
-        JMenuBar bar = new JMenuBar();
+        final JMenuBar menuBar = new JMenuBar();
 
-        JMenu file = new JMenu("File");
-        miExit = new JMenuItem("Exit");
-        miExit.setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_Q, InputEvent.CTRL_DOWN_MASK));
-        miExit.addActionListener(e -> attemptExit());
-        file.add(miExit);
+        final JMenu fileMenu = new JMenu("File");
+        final JMenuItem exitMenuItem = new JMenuItem("Exit");
+        exitMenuItem.setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_Q, InputEvent.CTRL_DOWN_MASK));
+        exitMenuItem.addActionListener(theEvent -> attemptExit());
+        fileMenu.add(exitMenuItem);
 
-        JMenu monitor = new JMenu("Monitor");
-        miStart = new JMenuItem("Start Monitoring");
-        miStart.setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_S, InputEvent.CTRL_DOWN_MASK));
-        miStart.addActionListener(e -> startFromUI());
+        final JMenu monitorMenu = new JMenu("Monitor");
+        myStartMenuItem = new JMenuItem("Start Monitoring");
+        myStartMenuItem.setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_S, InputEvent.CTRL_DOWN_MASK));
+        myStartMenuItem.addActionListener(theEvent -> startFromUserInput());
 
-        miStop = new JMenuItem("Stop Monitoring");
-        miStop.setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_T, InputEvent.CTRL_DOWN_MASK));
-        miStop.addActionListener(e -> stopFromUI());
+        myStopMenuItem = new JMenuItem("Stop Monitoring");
+        myStopMenuItem.setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_T, InputEvent.CTRL_DOWN_MASK));
+        myStopMenuItem.addActionListener(theEvent -> stopFromUserInput());
 
-        miWriteDb = new JMenuItem("Write Current List to DB");
-        miWriteDb.setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_D, InputEvent.CTRL_DOWN_MASK));
-        miWriteDb.addActionListener(e -> writeDbFromUI());
+        myWriteDatabaseMenuItem = new JMenuItem("Write Current List to DB");
+        myWriteDatabaseMenuItem.setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_D, InputEvent.CTRL_DOWN_MASK));
+        myWriteDatabaseMenuItem.addActionListener(theEvent -> writeDatabaseFromUserInput());
 
-        monitor.add(miStart);
-        monitor.add(miStop);
-        monitor.addSeparator();
-        monitor.add(miWriteDb);
+        final JMenuItem openQueryWindowItem = new JMenuItem("Open Query Window");
+        openQueryWindowItem.setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_R, InputEvent.CTRL_DOWN_MASK));
+        openQueryWindowItem.addActionListener(theEvent -> openQueryWindow());
 
-        JMenuItem miQuery = new JMenuItem("Open Query Window");
-        miQuery.addActionListener(e -> {
-            QueryWindow window = new QueryWindow(new QueryController(controller));
-            window.setVisible(true);
-        });
+        monitorMenu.add(myStartMenuItem);
+        monitorMenu.add(myStopMenuItem);
+        monitorMenu.addSeparator();
+        monitorMenu.add(myWriteDatabaseMenuItem);
+        monitorMenu.addSeparator();
+        monitorMenu.add(openQueryWindowItem);
 
-        monitor.addSeparator();
-        monitor.add(miQuery);
+        final JMenu helpMenu = new JMenu("Help");
+        final JMenuItem aboutMenuItem = new JMenuItem("About");
+        aboutMenuItem.setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_F1, 0));
+        aboutMenuItem.addActionListener(theEvent -> showAboutDialog());
+        helpMenu.add(aboutMenuItem);
 
-        JMenu help = new JMenu("Help");
-        JMenuItem about = new JMenuItem("About");
-        about.setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_F1, 0));
-        about.addActionListener(e -> showAbout());
-        help.add(about);
-
-        bar.add(file);
-        bar.add(monitor);
-        bar.add(help);
-
-        return bar;
+        menuBar.add(fileMenu);
+        menuBar.add(monitorMenu);
+        menuBar.add(helpMenu);
+        return menuBar;
     }
 
     private JToolBar buildToolBar() {
-        JToolBar tb = new JToolBar();
-        tb.setFloatable(false);
+        final JToolBar toolBar = new JToolBar();
+        toolBar.setFloatable(false);
 
-        JButton tbChoose = new JButton("Choose");
-        tbChoose.setToolTipText("Choose a directory to monitor");
-        tbChoose.addActionListener(e -> chooseFolder());
+        final JButton toolbarChooseButton = new JButton("Choose");
+        toolbarChooseButton.setToolTipText("Choose a directory to monitor.");
+        toolbarChooseButton.addActionListener(theEvent -> chooseFolder());
 
-        JButton tbStart = new JButton("Start");
-        tbStart.setToolTipText("Start monitoring (Ctrl+S)");
-        tbStart.addActionListener(e -> startFromUI());
+        final JButton toolbarStartButton = new JButton("Start");
+        toolbarStartButton.setToolTipText("Start monitoring (Ctrl+S).");
+        toolbarStartButton.addActionListener(theEvent -> startFromUserInput());
 
-        JButton tbStop = new JButton("Stop");
-        tbStop.setToolTipText("Stop monitoring (Ctrl+T)");
-        tbStop.addActionListener(e -> stopFromUI());
+        final JButton toolbarStopButton = new JButton("Stop");
+        toolbarStopButton.setToolTipText("Stop monitoring (Ctrl+T).");
+        toolbarStopButton.addActionListener(theEvent -> stopFromUserInput());
 
-        JButton tbWrite = new JButton("Write DB");
-        tbWrite.setToolTipText("Write current event list to DB (Ctrl+D)");
-        tbWrite.addActionListener(e -> writeDbFromUI());
+        final JButton toolbarWriteButton = new JButton("Write DB");
+        toolbarWriteButton.setToolTipText("Write the current event list to DB (Ctrl+D).");
+        toolbarWriteButton.addActionListener(theEvent -> writeDatabaseFromUserInput());
 
-        tb.add(tbChoose);
-        tb.add(tbStart);
-        tb.add(tbStop);
-        tb.add(tbWrite);
+        toolBar.add(toolbarChooseButton);
+        toolBar.add(toolbarStartButton);
+        toolBar.add(toolbarStopButton);
+        toolBar.add(toolbarWriteButton);
 
-        chooseBtn.putClientProperty("TB", tbChoose);
-        startBtn.putClientProperty("TB", tbStart);
-        stopBtn.putClientProperty("TB", tbStop);
-        writeDbBtn.putClientProperty("TB", tbWrite);
+        myChooseButton.putClientProperty(TOOLBAR_BUTTON_KEY, toolbarChooseButton);
+        myStartButton.putClientProperty(TOOLBAR_BUTTON_KEY, toolbarStartButton);
+        myStopButton.putClientProperty(TOOLBAR_BUTTON_KEY, toolbarStopButton);
+        myWriteDatabaseButton.putClientProperty(TOOLBAR_BUTTON_KEY, toolbarWriteButton);
 
-        return tb;
+        return toolBar;
     }
 
     private void wireEvents() {
-        chooseBtn.addActionListener(e -> chooseFolder());
-        startBtn.addActionListener(e -> startFromUI());
-        stopBtn.addActionListener(e -> stopFromUI());
-        writeDbBtn.addActionListener(e -> writeDbFromUI());
+        myChooseButton.addActionListener(theEvent -> chooseFolder());
+        myStartButton.addActionListener(theEvent -> startFromUserInput());
+        myStopButton.addActionListener(theEvent -> stopFromUserInput());
+        myWriteDatabaseButton.addActionListener(theEvent -> writeDatabaseFromUserInput());
     }
 
     private void chooseFolder() {
-        JFileChooser chooser = new JFileChooser();
+        final JFileChooser chooser = new JFileChooser();
         chooser.setFileSelectionMode(JFileChooser.DIRECTORIES_ONLY);
-        int result = chooser.showOpenDialog(this);
+        final int result = chooser.showOpenDialog(this);
         if (result == JFileChooser.APPROVE_OPTION) {
-            dirField.setText(chooser.getSelectedFile().getAbsolutePath());
+            myDirectoryField.setText(chooser.getSelectedFile().getAbsolutePath());
         }
         updateControls();
     }
 
-    private void startFromUI() {
-        String dir = dirField.getText().trim();
-        if (dir.isEmpty()) {
+    private void startFromUserInput() {
+        final String directoryText = myDirectoryField.getText().trim();
+        if (directoryText.isEmpty()) {
             JOptionPane.showMessageDialog(this, "Please choose a folder first.");
             return;
         }
 
-        Set<String> exts = parseExtensions(extField.getText());
-        controller.startMonitoring(Path.of(dir), exts);
-
-        appendLog("=== Monitoring STARTED: " + dir + " | exts=" + exts + " ===");
+        final Set<String> extensions = parseExtensions(myExtensionField.getText());
+        myController.startMonitoring(Path.of(directoryText), extensions);
+        appendLog("=== Monitoring STARTED: " + directoryText + " | exts=" + extensions + " ===");
         updateControls();
     }
 
-    private void stopFromUI() {
-        controller.stopMonitoring();
+    private void stopFromUserInput() {
+        myController.stopMonitoring();
         appendLog("=== Monitoring STOPPED ===");
         updateControls();
     }
 
-    private void writeDbFromUI() {
+    private void writeDatabaseFromUserInput() {
         try {
-            int count = controller.writeToDatabase();
+            final int count = myController.writeToDatabase();
             if (count > 0) {
                 appendLog("=== Written " + count + " event(s) to database ===");
                 JOptionPane.showMessageDialog(this, "Written " + count + " event(s) to database.");
             } else {
-                JOptionPane.showMessageDialog(this, "No events to write. Start monitoring and generate some events first.");
+                JOptionPane.showMessageDialog(this,
+                        "No events to write. Start monitoring and generate some events first.");
             }
-        } catch (Exception ex) {
-            appendLog("=== Write to DB failed: " + ex.getMessage() + " ===");
-            JOptionPane.showMessageDialog(this, "Failed to write to database: " + ex.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
+        } catch (final RuntimeException theException) {
+            appendLog("=== Write to DB failed: " + theException.getMessage() + " ===");
+            JOptionPane.showMessageDialog(
+                    this,
+                    "Failed to write to database: " + theException.getMessage(),
+                    "Error",
+                    JOptionPane.ERROR_MESSAGE
+            );
         }
         updateControls();
     }
 
+    private void openQueryWindow() {
+        final QueryWindow queryWindow = new QueryWindow(myQueryController);
+        queryWindow.setVisible(true);
+    }
+
     private void attemptExit() {
-        if (controller.hasUnsavedEvents()) {
-            int choice = JOptionPane.showConfirmDialog(this,
-                "Write current contents to the database before exiting?",
-                "Unsaved events",
-                JOptionPane.YES_NO_CANCEL_OPTION,
-                JOptionPane.QUESTION_MESSAGE);
+        if (myController.hasUnsavedEvents()) {
+            final int choice = JOptionPane.showConfirmDialog(
+                    this,
+                    "Write current contents to the database before exiting?",
+                    "Unsaved events",
+                    JOptionPane.YES_NO_CANCEL_OPTION,
+                    JOptionPane.QUESTION_MESSAGE
+            );
+
             if (choice == JOptionPane.YES_OPTION) {
                 try {
-                    int count = controller.writeToDatabase();
+                    final int count = myController.writeToDatabase();
                     appendLog("=== Written " + count + " event(s) to database before exit ===");
                     doExit();
-                } catch (Exception ex) {
-                    JOptionPane.showMessageDialog(this, "Failed to write to database: " + ex.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
+                } catch (final RuntimeException theException) {
+                    JOptionPane.showMessageDialog(
+                            this,
+                            "Failed to write to database: " + theException.getMessage(),
+                            "Error",
+                            JOptionPane.ERROR_MESSAGE
+                    );
                 }
             } else if (choice == JOptionPane.NO_OPTION) {
                 doExit();
             }
             return;
         }
-        if (controller.isRunning()) {
-            int choice = JOptionPane.showConfirmDialog(this,
-                "Monitoring is currently running.\nStop monitoring and exit?",
-                "Exit",
-                JOptionPane.YES_NO_OPTION);
-            if (choice != JOptionPane.YES_OPTION) return;
-            controller.stopMonitoring();
+
+        if (myController.isRunning()) {
+            final int choice = JOptionPane.showConfirmDialog(
+                    this,
+                    "Monitoring is currently running.\nStop monitoring and exit?",
+                    "Exit",
+                    JOptionPane.YES_NO_OPTION
+            );
+            if (choice != JOptionPane.YES_OPTION) {
+                return;
+            }
+            myController.stopMonitoring();
         } else {
-            int choice = JOptionPane.showConfirmDialog(this,
-                "Exit the application?",
-                "Exit",
-                JOptionPane.YES_NO_OPTION);
-            if (choice != JOptionPane.YES_OPTION) return;
+            final int choice = JOptionPane.showConfirmDialog(
+                    this,
+                    "Exit the application?",
+                    "Exit",
+                    JOptionPane.YES_NO_OPTION
+            );
+            if (choice != JOptionPane.YES_OPTION) {
+                return;
+            }
         }
+
         doExit();
     }
 
     private void doExit() {
-        if (controller.isRunning()) {
-            controller.stopMonitoring();
+        if (myController.isRunning()) {
+            myController.stopMonitoring();
         }
         dispose();
         System.exit(0);
     }
 
-    private void showAbout() {
-        JOptionPane.showMessageDialog(this,
-            "TCSS360 FileWatcher\n\n" +
-                "Monitor a folder and log file events.\n" +
-                "Iteration 4: menus, toolbar, shortcuts, SQLite write, exit prompt.\n\n" +
-                "Developers:\n" +
-                " - Jonathan Sung\n" +
-                " - Abdulrahman Elmi",
-            "About",
-            JOptionPane.INFORMATION_MESSAGE);
+    private void showAboutDialog() {
+        JOptionPane.showMessageDialog(
+                this,
+                APPLICATION_TITLE + "\n\n"
+                        + "Monitor a folder and log file events.\n"
+                        + "Features include menus, toolbar, SQLite writing, query support, and CSV export.\n\n"
+                        + "Developers:\n"
+                        + " - Jonathan Sung\n"
+                        + " - Abdulrahman Elmi",
+                "About",
+                JOptionPane.INFORMATION_MESSAGE
+        );
     }
 
     private void updateControls() {
-        boolean running = controller.isRunning();
+        final boolean running = myController.isRunning();
 
-        chooseBtn.setEnabled(!running);
-        dirField.setEnabled(!running);
-        extField.setEnabled(!running);
+        myChooseButton.setEnabled(!running);
+        myDirectoryField.setEnabled(!running);
+        myExtensionField.setEnabled(!running);
 
-        startBtn.setEnabled(!running && !dirField.getText().trim().isEmpty());
-        stopBtn.setEnabled(running);
+        myStartButton.setEnabled(!running && !myDirectoryField.getText().trim().isEmpty());
+        myStopButton.setEnabled(running);
+        myWriteDatabaseButton.setEnabled(myController.hasAnyEvents());
 
-        boolean canWrite = controller.hasAnyEvents();
-        writeDbBtn.setEnabled(canWrite);
+        if (myStartMenuItem != null) {
+            myStartMenuItem.setEnabled(myStartButton.isEnabled());
+        }
+        if (myStopMenuItem != null) {
+            myStopMenuItem.setEnabled(myStopButton.isEnabled());
+        }
+        if (myWriteDatabaseMenuItem != null) {
+            myWriteDatabaseMenuItem.setEnabled(myWriteDatabaseButton.isEnabled());
+        }
 
-        if (miStart != null) miStart.setEnabled(startBtn.isEnabled());
-        if (miStop != null) miStop.setEnabled(stopBtn.isEnabled());
-        if (miWriteDb != null) miWriteDb.setEnabled(writeDbBtn.isEnabled());
-
-        syncToolbarEnabled(chooseBtn);
-        syncToolbarEnabled(startBtn);
-        syncToolbarEnabled(stopBtn);
-        syncToolbarEnabled(writeDbBtn);
+        syncToolbarEnabled(myChooseButton);
+        syncToolbarEnabled(myStartButton);
+        syncToolbarEnabled(myStopButton);
+        syncToolbarEnabled(myWriteDatabaseButton);
     }
 
-    private void syncToolbarEnabled(JButton sourceBtn) {
-        Object tb = sourceBtn.getClientProperty("TB");
-        if (tb instanceof JButton) {
-            ((JButton) tb).setEnabled(sourceBtn.isEnabled());
+    private void syncToolbarEnabled(final JButton theSourceButton) {
+        final Object toolbarButton = theSourceButton.getClientProperty(TOOLBAR_BUTTON_KEY);
+        if (toolbarButton instanceof JButton button) {
+            button.setEnabled(theSourceButton.isEnabled());
         }
     }
 
-    private static Set<String> parseExtensions(String text) {
-        Set<String> set = new HashSet<>();
-        if (text == null || text.isBlank()) return set;
+    private static Set<String> parseExtensions(final String theText) {
+        final Set<String> extensions = new LinkedHashSet<>();
+        if (theText == null || theText.isBlank()) {
+            return extensions;
+        }
 
-        Arrays.stream(text.split(","))
-            .map(String::trim)
-            .filter(s -> !s.isEmpty())
-            .map(s -> s.startsWith(".") ? s.substring(1) : s)
-            .map(String::toLowerCase)
-            .forEach(set::add);
+        Arrays.stream(theText.split(","))
+                .map(String::trim)
+                .filter(text -> !text.isEmpty())
+                .map(text -> text.startsWith(".") ? text.substring(1) : text)
+                .map(String::toLowerCase)
+                .forEach(extensions::add);
 
-        return set;
+        return extensions;
     }
 
     @Override
-    public void onFileEvent(FileEvent event) {
+    public void onFileEvent(final FileEvent theEvent) {
         SwingUtilities.invokeLater(() -> {
-            appendLog(event.toString());
+            appendLog(theEvent.toString());
             updateControls();
         });
     }
 
-    private void appendLog(String line) {
-        logArea.append(line + "\n");
-        logArea.setCaretPosition(logArea.getDocument().getLength());
+    private void appendLog(final String theLine) {
+        myLogArea.append(theLine + System.lineSeparator());
+        myLogArea.setCaretPosition(myLogArea.getDocument().getLength());
     }
 }

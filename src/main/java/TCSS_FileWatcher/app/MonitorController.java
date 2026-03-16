@@ -1,81 +1,94 @@
 package TCSS_FileWatcher.app;
 
-import java.nio.file.Path;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Set;
-import java.util.concurrent.CopyOnWriteArrayList;
-
 import TCSS_FileWatcher.domain.FileEvent;
 import TCSS_FileWatcher.domain.QueryCriteria;
 import TCSS_FileWatcher.monitor.FileEventListener;
 import TCSS_FileWatcher.monitor.FileMonitorService;
 
-public class MonitorController implements FileEventListener {
+import java.nio.file.Path;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Objects;
+import java.util.Set;
+import java.util.concurrent.CopyOnWriteArrayList;
 
-    private final FileMonitorService monitor;
-    private final EventRepository repository;
-    private final List<FileEvent> eventBuffer = new CopyOnWriteArrayList<>();
+/**
+ * Coordinates monitoring and persistence for file events.
+ */
+public final class MonitorController implements FileEventListener {
 
-    public MonitorController(FileMonitorService monitor, EventRepository repository) {
-        this.monitor = monitor;
-        this.repository = repository;
-        this.monitor.addListener(this);
+    private final FileMonitorService myMonitor;
+    private final EventRepository myRepository;
+    private final List<FileEvent> myEventBuffer;
+
+    public MonitorController(final FileMonitorService theMonitor,
+                             final EventRepository theRepository) {
+        myMonitor = Objects.requireNonNull(theMonitor, "Monitor service cannot be null.");
+        myRepository = Objects.requireNonNull(theRepository, "Repository cannot be null.");
+        myEventBuffer = new CopyOnWriteArrayList<>();
+        myMonitor.addListener(this);
     }
 
     @Override
-    public void onFileEvent(FileEvent event) {
-        if (event != null) {
-            eventBuffer.add(event);
+    public void onFileEvent(final FileEvent theEvent) {
+        if (theEvent != null) {
+            myEventBuffer.add(theEvent);
         }
     }
 
-    public void startMonitoring(Path directory, Set<String> extensions) {
-        QueryCriteria criteria = new QueryCriteria(extensions);
-        monitor.start(directory, criteria);
+    public void startMonitoring(final Path theDirectory,
+                                final Set<String> theExtensions) {
+        final QueryCriteria criteria = new QueryCriteria(theExtensions);
+        myMonitor.start(theDirectory, criteria);
     }
 
     public void stopMonitoring() {
-        monitor.stop();
+        myMonitor.stop();
     }
 
     public boolean isRunning() {
-        return monitor.isRunning();
+        return myMonitor.isRunning();
     }
 
-    public void addListener(FileEventListener listener) {
-        monitor.addListener(listener);
+    public void addListener(final FileEventListener theListener) {
+        myMonitor.addListener(theListener);
     }
 
-    public void removeListener(FileEventListener listener) {
-        monitor.removeListener(listener);
+    public void removeListener(final FileEventListener theListener) {
+        myMonitor.removeListener(theListener);
     }
 
     /**
-     * Writes all buffered events to the database and clears the buffer.
-     * @return number of events written
+     * Writes buffered events to the database and clears the in-memory buffer.
+     *
+     * @return the number of events written
      */
     public int writeToDatabase() {
-        if (eventBuffer.isEmpty()) {
+        if (myEventBuffer.isEmpty()) {
             return 0;
         }
-        repository.initSchema();
-        List<FileEvent> snapshot = new ArrayList<>(eventBuffer);
-        repository.insertAll(snapshot);
-        eventBuffer.clear();
+
+        myRepository.initSchema();
+        final List<FileEvent> snapshot = new ArrayList<>(myEventBuffer);
+        myRepository.insertAll(snapshot);
+        myEventBuffer.clear();
         return snapshot.size();
     }
-    public List<FileEvent> getCurrentEventsSnapshot() {
-        return new ArrayList<>(eventBuffer);
-    }
-    /** Returns true if there are events in the buffer not yet written to the database. */
+
     public boolean hasUnsavedEvents() {
-        return !eventBuffer.isEmpty();
+        return !myEventBuffer.isEmpty();
     }
 
-    /** Returns true if there are any events (for UI enable/disable). */
     public boolean hasAnyEvents() {
-        return !eventBuffer.isEmpty();
+        return !myEventBuffer.isEmpty();
     }
 
+    /**
+     * Returns a defensive copy of the current session's events.
+     *
+     * @return a snapshot of the current event buffer
+     */
+    public List<FileEvent> getCurrentEventsSnapshot() {
+        return new ArrayList<>(myEventBuffer);
+    }
 }

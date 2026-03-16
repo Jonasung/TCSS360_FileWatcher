@@ -2,32 +2,39 @@ package TCSS_FileWatcher.domain;
 
 import java.nio.file.Path;
 import java.time.Instant;
+import java.util.Objects;
 
+/**
+ * Immutable value object describing a single observed file-system event.
+ */
 public final class FileEvent {
-    private final EventType type;
-    private final Path path;
-    private final Instant timestamp;
 
-    public FileEvent(EventType type, Path path, Instant timestamp) {
-        this.type = type;
-        this.path = path;
-        this.timestamp = timestamp;
+    private final EventType myType;
+    private final Path myPath;
+    private final Instant myTimestamp;
+
+    public FileEvent(final EventType theType,
+                     final Path thePath,
+                     final Instant theTimestamp) {
+        myType = Objects.requireNonNull(theType, "Event type cannot be null.");
+        myPath = Objects.requireNonNull(thePath, "Path cannot be null.");
+        myTimestamp = Objects.requireNonNull(theTimestamp, "Timestamp cannot be null.");
     }
 
     public EventType getType() {
-        return type;
+        return myType;
     }
 
     public Path getPath() {
-        return path;
+        return myPath;
     }
 
     public Instant getTimestamp() {
-        return timestamp;
+        return myTimestamp;
     }
 
     @Override
     public String toString() {
-        return "[" + timestamp + "] " + type + " -> " + path;
+        return "[" + myTimestamp + "] " + myType + " -> " + myPath;
     }
 }

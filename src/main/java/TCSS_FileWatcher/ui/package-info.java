@@ -1,4 +1,4 @@
 /**
- * Main window: menu strip, toolbar, extension chooser, event list. (Sprint 1 – Person B)
+ * Main Swing UI for monitoring directories and managing events.
  */
 package TCSS_FileWatcher.ui;

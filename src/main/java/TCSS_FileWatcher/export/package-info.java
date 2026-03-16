@@ -1,4 +1,4 @@
 /**
- * Export: CSV write (query info + table), optional email. (Sprint 3 – Person A, extra credit)
+ * Export-related services, including CSV generation for query results.
  */
 package TCSS_FileWatcher.export;

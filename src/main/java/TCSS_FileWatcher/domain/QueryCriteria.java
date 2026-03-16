@@ -4,31 +4,37 @@ import java.util.Collections;
 import java.util.HashSet;
 import java.util.Set;
 
+/**
+ * Encapsulates optional filters used when monitoring files.
+ */
 public final class QueryCriteria {
-    private final Set<String> allowedExtensions; // e.g. "txt", "java"
 
-    public QueryCriteria(Set<String> allowedExtensions) {
-        this.allowedExtensions = new HashSet<>();
-        if (allowedExtensions != null) {
-            for (String ext : allowedExtensions) {
-                if (ext != null && !ext.isBlank()) {
-                    this.allowedExtensions.add(normalize(ext));
+    private final Set<String> myAllowedExtensions;
+
+    public QueryCriteria(final Set<String> theAllowedExtensions) {
+        myAllowedExtensions = new HashSet<>();
+        if (theAllowedExtensions != null) {
+            for (final String extension : theAllowedExtensions) {
+                if (extension != null && !extension.isBlank()) {
+                    myAllowedExtensions.add(normalize(extension));
                 }
             }
         }
     }
 
     public Set<String> getAllowedExtensions() {
-        return Collections.unmodifiableSet(allowedExtensions);
+        return Collections.unmodifiableSet(myAllowedExtensions);
     }
 
     public boolean hasExtensionFilter() {
-        return !allowedExtensions.isEmpty();
+        return !myAllowedExtensions.isEmpty();
     }
 
-    private static String normalize(String ext) {
-        ext = ext.trim().toLowerCase();
-        if (ext.startsWith(".")) ext = ext.substring(1);
-        return ext;
+    private static String normalize(final String theExtension) {
+        String normalized = theExtension.trim().toLowerCase();
+        if (normalized.startsWith(".")) {
+            normalized = normalized.substring(1);
+        }
+        return normalized;
     }
 }

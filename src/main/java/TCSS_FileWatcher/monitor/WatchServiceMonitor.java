@@ -1,124 +1,160 @@
 package TCSS_FileWatcher.monitor;
 
-import java.io.IOException;
-import java.nio.file.*;
-import java.time.Instant;
-import java.util.List;
-import java.util.concurrent.CopyOnWriteArrayList;
-
 import TCSS_FileWatcher.domain.EventType;
 import TCSS_FileWatcher.domain.FileEvent;
 import TCSS_FileWatcher.domain.QueryCriteria;
 
-import static java.nio.file.StandardWatchEventKinds.*;
+import java.io.IOException;
+import java.nio.file.FileSystems;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.StandardWatchEventKinds;
+import java.nio.file.WatchEvent;
+import java.nio.file.WatchKey;
+import java.nio.file.WatchService;
+import java.time.Instant;
+import java.util.List;
+import java.util.concurrent.CopyOnWriteArrayList;
 
-public class WatchServiceMonitor implements FileMonitorService {
+/**
+ * {@link FileMonitorService} implementation backed by Java's {@link WatchService}.
+ */
+public final class WatchServiceMonitor implements FileMonitorService {
 
-    private final List<FileEventListener> listeners = new CopyOnWriteArrayList<>();
-    private volatile boolean running = false;
+    private final List<FileEventListener> myListeners;
+    private volatile boolean myRunning;
+    private Thread myWorker;
+    private WatchService myWatchService;
 
-    private Thread worker;
-    private WatchService watchService;
-
-    @Override
-    public void start(Path directory, QueryCriteria criteria) {
-        if (running) return;
-        if (directory == null) throw new IllegalArgumentException("directory cannot be null");
-        if (!Files.isDirectory(directory)) throw new IllegalArgumentException("Not a directory: " + directory);
-
-        running = true;
-
-        worker = new Thread(() -> runLoop(directory, criteria), "WatchServiceMonitor-Thread");
-        worker.setDaemon(true);
-        worker.start();
+    public WatchServiceMonitor() {
+        myListeners = new CopyOnWriteArrayList<>();
     }
 
-    private void runLoop(Path directory, QueryCriteria criteria) {
-        try (WatchService ws = FileSystems.getDefault().newWatchService()) {
-            this.watchService = ws;
+    @Override
+    public void start(final Path theDirectory,
+                      final QueryCriteria theCriteria) {
+        if (myRunning) {
+            return;
+        }
+        if (theDirectory == null) {
+            throw new IllegalArgumentException("Directory cannot be null.");
+        }
+        if (!Files.isDirectory(theDirectory)) {
+            throw new IllegalArgumentException("Not a directory: " + theDirectory);
+        }
 
-            directory.register(ws, ENTRY_CREATE, ENTRY_MODIFY, ENTRY_DELETE);
+        myRunning = true;
+        myWorker = new Thread(() -> runLoop(theDirectory, theCriteria), "WatchServiceMonitor-Thread");
+        myWorker.setDaemon(true);
+        myWorker.start();
+    }
 
-            while (running) {
-                WatchKey key;
+    private void runLoop(final Path theDirectory,
+                         final QueryCriteria theCriteria) {
+        try (WatchService watchService = FileSystems.getDefault().newWatchService()) {
+            myWatchService = watchService;
+            theDirectory.register(
+                    watchService,
+                    StandardWatchEventKinds.ENTRY_CREATE,
+                    StandardWatchEventKinds.ENTRY_MODIFY,
+                    StandardWatchEventKinds.ENTRY_DELETE
+            );
+
+            while (myRunning) {
+                final WatchKey key;
                 try {
-                    key = ws.take(); // blocks
-                } catch (InterruptedException e) {
+                    key = watchService.take();
+                } catch (final InterruptedException theException) {
+                    Thread.currentThread().interrupt();
                     break;
                 }
 
-                for (WatchEvent<?> event : key.pollEvents()) {
-                    if (!running) break;
+                for (final WatchEvent<?> event : key.pollEvents()) {
+                    if (!myRunning) {
+                        break;
+                    }
 
-                    WatchEvent.Kind<?> kind = event.kind();
-                    if (kind == OVERFLOW) continue;
+                    final WatchEvent.Kind<?> kind = event.kind();
+                    if (kind == StandardWatchEventKinds.OVERFLOW) {
+                        continue;
+                    }
 
                     @SuppressWarnings("unchecked")
-                    WatchEvent<Path> ev = (WatchEvent<Path>) event;
+                    final WatchEvent<Path> pathEvent = (WatchEvent<Path>) event;
+                    final Path fullPath = theDirectory.resolve(pathEvent.context());
+                    final EventType eventType = toEventType(kind);
 
-                    Path relative = ev.context();
-                    Path fullPath = directory.resolve(relative);
-
-                    EventType type = toEventType(kind);
-                    if (type == null) continue;
-
-                    // filter
-                    if (!ExtensionFilter.matches(fullPath, criteria)) continue;
-
-                    FileEvent fileEvent = new FileEvent(type, fullPath, Instant.now());
-                    notifyListeners(fileEvent);
+                    if (eventType != null && ExtensionFilter.matches(fullPath, theCriteria)) {
+                        notifyListeners(new FileEvent(eventType, fullPath, Instant.now()));
+                    }
                 }
 
-                boolean valid = key.reset();
-                if (!valid) break;
+                if (!key.reset()) {
+                    break;
+                }
             }
-        } catch (IOException ex) {
-            notifyListeners(new FileEvent(EventType.MODIFIED, directory, Instant.now())); // fallback “something happened”
+        } catch (final IOException theException) {
+            // Keep fallback behavior simple for the course project.
+            notifyListeners(new FileEvent(EventType.MODIFIED, theDirectory, Instant.now()));
         } finally {
-            running = false;
+            myRunning = false;
         }
     }
 
-    private static EventType toEventType(WatchEvent.Kind<?> kind) {
-        if (kind == ENTRY_CREATE) return EventType.CREATED;
-        if (kind == ENTRY_MODIFY) return EventType.MODIFIED;
-        if (kind == ENTRY_DELETE) return EventType.DELETED;
+    private static EventType toEventType(final WatchEvent.Kind<?> theKind) {
+        if (theKind == StandardWatchEventKinds.ENTRY_CREATE) {
+            return EventType.CREATED;
+        }
+        if (theKind == StandardWatchEventKinds.ENTRY_MODIFY) {
+            return EventType.MODIFIED;
+        }
+        if (theKind == StandardWatchEventKinds.ENTRY_DELETE) {
+            return EventType.DELETED;
+        }
         return null;
     }
 
-    private void notifyListeners(FileEvent event) {
-        for (FileEventListener l : listeners) {
+    private void notifyListeners(final FileEvent theEvent) {
+        for (final FileEventListener listener : myListeners) {
             try {
-                l.onFileEvent(event);
-            } catch (Exception ignored) {
-                // avoid crashing monitor due to UI exceptions
+                listener.onFileEvent(theEvent);
+            } catch (final RuntimeException ignored) {
+                // Prevent UI or listener failures from crashing the monitor thread.
             }
         }
     }
 
     @Override
     public void stop() {
-        running = false;
+        myRunning = false;
 
         try {
-            if (watchService != null) watchService.close();
-        } catch (IOException ignored) {}
+            if (myWatchService != null) {
+                myWatchService.close();
+            }
+        } catch (final IOException ignored) {
+            // Nothing else to do here.
+        }
 
-        if (worker != null) worker.interrupt();
+        if (myWorker != null) {
+            myWorker.interrupt();
+        }
     }
 
     @Override
     public boolean isRunning() {
-        return running;
+        return myRunning;
     }
 
     @Override
-    public void addListener(FileEventListener listener) {
-        if (listener != null) listeners.add(listener);
+    public void addListener(final FileEventListener theListener) {
+        if (theListener != null) {
+            myListeners.add(theListener);
+        }
     }
 
     @Override
-    public void removeListener(FileEventListener listener) {
-        listeners.remove(listener);
+    public void removeListener(final FileEventListener theListener) {
+        myListeners.remove(theListener);
     }
 }

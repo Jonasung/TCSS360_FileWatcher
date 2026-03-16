@@ -1,4 +1,4 @@
 /**
- * File system monitoring (WatchService, FileMonitorService, FileEventListener, ExtensionFilter).
+ * Monitoring abstractions and WatchService-based file observation support.
  */
 package TCSS_FileWatcher.monitor;

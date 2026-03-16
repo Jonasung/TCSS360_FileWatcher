@@ -4,85 +4,117 @@ import TCSS_FileWatcher.domain.EventType;
 import TCSS_FileWatcher.domain.FileEvent;
 
 import java.nio.file.Path;
-import java.time.*;
+import java.time.Instant;
+import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
 import java.util.Objects;
 
-public class QueryController {
+/**
+ * Performs in-memory querying over the current session's buffered events.
+ */
+public final class QueryController {
 
-    private final MonitorController monitorController;
+    private final MonitorController myMonitorController;
 
-    public QueryController(MonitorController monitorController) {
-        this.monitorController = Objects.requireNonNull(monitorController);
+    public QueryController(final MonitorController theMonitorController) {
+        myMonitorController = Objects.requireNonNull(theMonitorController, "MonitorController cannot be null.");
     }
 
-    /** Source for now = current session events (Iteration 5). Later: replace with DB results. */
     private List<FileEvent> sourceEvents() {
-        return monitorController.getCurrentEventsSnapshot();
+        return myMonitorController.getCurrentEventsSnapshot();
     }
 
-    public List<FileEvent> queryByExtension(String extRaw) {
-        String ext = normalizeExt(extRaw);
-        List<FileEvent> out = new ArrayList<>();
-        for (FileEvent e : sourceEvents()) {
-            String eventExt = getExtension(e.getPath());
-            if (eventExt.equals(ext)) out.add(e);
-        }
-        return out;
-    }
+    public List<FileEvent> queryByExtension(final String theRawExtension) {
+        final String extension = normalizeExtension(theRawExtension);
+        final List<FileEvent> matches = new ArrayList<>();
 
-    public List<FileEvent> queryByDateRange(LocalDateTime from, LocalDateTime to) {
-        if (from == null || to == null) throw new IllegalArgumentException("From/To must be provided.");
-        if (from.isAfter(to)) throw new IllegalArgumentException("From must be <= To.");
-
-        Instant fromI = from.atZone(ZoneId.systemDefault()).toInstant();
-        Instant toI = to.atZone(ZoneId.systemDefault()).toInstant();
-
-        List<FileEvent> out = new ArrayList<>();
-        for (FileEvent e : sourceEvents()) {
-            Instant ts = e.getTimestamp(); // requires getter
-            if ((ts.equals(fromI) || ts.isAfter(fromI)) && (ts.equals(toI) || ts.isBefore(toI))) {
-                out.add(e);
+        for (final FileEvent event : sourceEvents()) {
+            if (getExtension(event.getPath()).equals(extension)) {
+                matches.add(event);
             }
         }
-        return out;
+        return matches;
     }
 
-    public List<FileEvent> queryByEventType(EventType type) {
-        if (type == null) throw new IllegalArgumentException("Event type must be selected.");
-        List<FileEvent> out = new ArrayList<>();
-        for (FileEvent e : sourceEvents()) {
-            if (e.getType() == type) out.add(e);
+    public List<FileEvent> queryByDateRange(final LocalDateTime theFrom,
+                                            final LocalDateTime theTo) {
+        if (theFrom == null || theTo == null) {
+            throw new IllegalArgumentException("From and To dates must both be provided.");
         }
-        return out;
-    }
-
-    public List<FileEvent> queryByPathPrefix(String pathRaw) {
-        if (pathRaw == null || pathRaw.isBlank()) throw new IllegalArgumentException("Path must be provided.");
-        Path prefix = Path.of(pathRaw.trim()).toAbsolutePath().normalize();
-
-        List<FileEvent> out = new ArrayList<>();
-        for (FileEvent e : sourceEvents()) {
-            Path p = e.getPath().toAbsolutePath().normalize();
-            if (p.equals(prefix) || p.startsWith(prefix)) out.add(e);
+        if (theFrom.isAfter(theTo)) {
+            throw new IllegalArgumentException("From date must be earlier than or equal to To date.");
         }
-        return out;
+
+        final Instant fromInstant = theFrom.atZone(ZoneId.systemDefault()).toInstant();
+        final Instant toInstant = theTo.atZone(ZoneId.systemDefault()).toInstant();
+        final List<FileEvent> matches = new ArrayList<>();
+
+        for (final FileEvent event : sourceEvents()) {
+            final Instant timestamp = event.getTimestamp();
+            final boolean inRange = (timestamp.equals(fromInstant) || timestamp.isAfter(fromInstant))
+                    && (timestamp.equals(toInstant) || timestamp.isBefore(toInstant));
+            if (inRange) {
+                matches.add(event);
+            }
+        }
+        return matches;
     }
 
-    private static String normalizeExt(String extRaw) {
-        if (extRaw == null) throw new IllegalArgumentException("Extension must be provided.");
-        String ext = extRaw.trim().toLowerCase(Locale.ROOT);
-        if (ext.startsWith(".")) ext = ext.substring(1);
-        if (ext.isBlank()) throw new IllegalArgumentException("Extension must be provided.");
-        return ext;
+    public List<FileEvent> queryByEventType(final EventType theType) {
+        if (theType == null) {
+            throw new IllegalArgumentException("An event type must be selected.");
+        }
+
+        final List<FileEvent> matches = new ArrayList<>();
+        for (final FileEvent event : sourceEvents()) {
+            if (event.getType() == theType) {
+                matches.add(event);
+            }
+        }
+        return matches;
     }
 
-    private static String getExtension(Path path) {
-        String name = path.getFileName().toString();
-        int dot = name.lastIndexOf('.');
-        if (dot < 0 || dot == name.length() - 1) return "";
-        return name.substring(dot + 1).toLowerCase(Locale.ROOT);
+    public List<FileEvent> queryByPathPrefix(final String theRawPath) {
+        if (theRawPath == null || theRawPath.isBlank()) {
+            throw new IllegalArgumentException("A path must be provided.");
+        }
+
+        final Path prefix = Path.of(theRawPath.trim()).toAbsolutePath().normalize();
+        final List<FileEvent> matches = new ArrayList<>();
+        for (final FileEvent event : sourceEvents()) {
+            final Path eventPath = event.getPath().toAbsolutePath().normalize();
+            if (eventPath.equals(prefix) || eventPath.startsWith(prefix)) {
+                matches.add(event);
+            }
+        }
+        return matches;
+    }
+
+    private static String normalizeExtension(final String theRawExtension) {
+        if (theRawExtension == null) {
+            throw new IllegalArgumentException("An extension must be provided.");
+        }
+
+        String extension = theRawExtension.trim().toLowerCase(Locale.ROOT);
+        if (extension.startsWith(".")) {
+            extension = extension.substring(1);
+        }
+        if (extension.isBlank()) {
+            throw new IllegalArgumentException("An extension must be provided.");
+        }
+        return extension;
+    }
+
+    private static String getExtension(final Path thePath) {
+        final Path fileName = thePath.getFileName();
+        final String name = fileName == null ? thePath.toString() : fileName.toString();
+        final int dotIndex = name.lastIndexOf('.');
+        if (dotIndex < 0 || dotIndex == name.length() - 1) {
+            return "";
+        }
+        return name.substring(dotIndex + 1).toLowerCase(Locale.ROOT);
     }
 }
