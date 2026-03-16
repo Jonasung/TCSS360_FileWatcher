@@ -65,7 +65,9 @@ public class MonitorController implements FileEventListener {
         eventBuffer.clear();
         return snapshot.size();
     }
-
+    public List<FileEvent> getCurrentEventsSnapshot() {
+        return new ArrayList<>(eventBuffer);
+    }
     /** Returns true if there are events in the buffer not yet written to the database. */
     public boolean hasUnsavedEvents() {
         return !eventBuffer.isEmpty();
@@ -75,4 +77,5 @@ public class MonitorController implements FileEventListener {
     public boolean hasAnyEvents() {
         return !eventBuffer.isEmpty();
     }
+
 }

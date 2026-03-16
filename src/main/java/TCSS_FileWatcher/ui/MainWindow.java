@@ -5,6 +5,8 @@ import javax.swing.*;
 import TCSS_FileWatcher.app.MonitorController;
 import TCSS_FileWatcher.domain.FileEvent;
 import TCSS_FileWatcher.monitor.FileEventListener;
+import TCSS_FileWatcher.app.QueryController;
+import TCSS_FileWatcher.ui.query.QueryWindow;
 
 import java.awt.*;
 import java.awt.event.*;
@@ -122,6 +124,15 @@ public class MainWindow extends JFrame implements FileEventListener {
         monitor.add(miStop);
         monitor.addSeparator();
         monitor.add(miWriteDb);
+
+        JMenuItem miQuery = new JMenuItem("Open Query Window");
+        miQuery.addActionListener(e -> {
+            QueryWindow window = new QueryWindow(new QueryController(controller));
+            window.setVisible(true);
+        });
+
+        monitor.addSeparator();
+        monitor.add(miQuery);
 
         JMenu help = new JMenu("Help");
         JMenuItem about = new JMenuItem("About");
